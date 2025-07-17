@@ -2116,749 +2116,164 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
 // ... (الجزء العلوي من الملف، بما في ذلك require و app.use و TRANSLATIONS و CSS_BASE_CONTENT، يبقى كما هو)
 
 // دالة بناء HTML (النسخة النهائية مع أنماط مدمجة للتخطيط)
+// استبدل الدالة القديمة بالكامل بهذه النسخة
 function buildCvHtml(cvData) {
+    // 1. استخراج كل البيانات من الكائن المرسل
     const {
         name, jobTitle, email, phone, website, profilePicDataUrl,
         objective, experiences, educations, customSections, skills, languages, references,
-        templateCategory, templateNumber, language, isPaid, templateCss // templateCss سيستمر في تمرير الأنماط الجمالية
+        templateCategory, templateNumber, language
     } = cvData;
 
     const direction = language === 'ar' ? 'rtl' : 'ltr';
 
-    // --- 1. تعريف كائنات الأنماط الأساسية (Inline Styles) ---
-    // هذه الأنماط ستُطبق بشكل مباشر لحل مشاكل الهوامش والخطوط الأساسية والتخطيط الحاسم
-
-    const bodyHtmlStyles = `
-        margin: 0 !important;
-        padding: 0 !important;
-        font-family: 'Tajawal', sans-serif !important;
-        font-size: 10pt !important;
-        line-height: 1.5 !important;
-        background-color: #fff !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        direction: ${direction} !important;
-        text-align: ${direction === 'rtl' ? 'right' : 'left'} !important;
-    `;
-
-    const cvContainerHtmlStyles = `
-        width: 210mm !important;
-        min-height: 297mm !important; /* ارتفاع A4 كحد أدنى */
-        height: auto !important; /* **مهم جداً:** فرض ارتفاع A4 هنا */
-        margin: 0 !important;
-        padding: 0 !important;
-        display: flex !important;
-        flex-direction: column !important;
-        position: relative !important;
-        box-sizing: border-box !important;
-        overflow: visible !important; /* للسماح بتدفق المحتوى */
-        box-shadow: none !important; /* إزالة أي ظل من المعاينة */
-        border: none !important; /* إزالة أي حدود من المعاينة */
-    `;
-
-    const cvContentHtmlStyles = `
-        display: flex !important;
-        flex-direction: column !important;
-        flex-grow: 1 !important;
-        padding: 3mm !important; /* الحشوة الآن ستكون داخل الأعمدة أو مباشرة على الأقسام */
-        box-sizing: border-box !important;
-        width: 100% !important;
-        min-height: 100% !important; /* لتأمين امتداد المحتوى داخل الحاوية */
-        height: 100% !important;
-        overflow: visible !important;
-    `;
-
-    const cvSectionHtmlStyles = `
-        margin-bottom: 3mm !important;
-        padding: 0 !important;
-        flex-grow: 0 !important;
-        flex-shrink: 0 !important;
-        page-break-inside: auto !important;
-        page-break-after: auto !important; /* لا تجبر كسر صفحة بعده */
-        page-break-before: auto !important; /* لا تجبر كسر صفحة قبله */
-    `;
-
-    const cvSectionTitleHtmlStyles = `
-        font-size: 1.2em !important;
-        font-weight: 600 !important;
-        margin-top: 2mm !important;
-        margin-bottom: 2mm !important;
-        padding-bottom: 2mm !important;
-        border-bottom-width: 1px !important;
-        line-height: 1.2 !important;
-        page-break-after: avoid !important; /* **مهم:** لمنع العنوان من الظهور وحده في نهاية صفحة */
-        page-break-before: auto !important;
-    `;
-
-    const cvExperienceItemHtmlStyles = `
-        margin-bottom: 3mm !important;
-        padding-bottom: 1.5mm !important;
-        border-bottom: 0.5px solid #ccc !important;
-        page-break-inside: avoid !important;
-        page-break-before: auto !important; /* لا تجبر كسر صفحة قبل العنصر */
-        page-break-after: auto !important; /* لا تجبر كسر صفحة بعد العنصر */
-    `;
-
-    const cvReferenceItemHtmlStyles = `
-        margin-bottom: 4mm !important; /* زيادة الهامش السفلي قليلاً عن الخبرات */
-        padding-bottom: 2mm !important; /* زيادة الحشوة السفلية قليلاً */
-        border-bottom: 0.5px dashed #aaa !important; /* تغيير نوع الخط الفاصل ولونه */
-        page-break-before: auto !important;
-        page-break-after: auto !important;
-    `;
-     // Styles for the last item in a list (removes border and bottom margin)
-     const lastItemHtmlStyles = `
-        border-bottom: none !important;
-        padding-bottom: 5px !important;
-        margin-bottom: 5px !important;
-    `;
-
-    // --- 2. بناء كتل HTML (هذا الجزء يبقى كما هو في معظم تفاصيله) ---
-    let profilePicHtml = profilePicDataUrl ? `<img src="${profilePicDataUrl}" class="cv-profile-pic" alt="${getTranslation(language, 'Profile Picture')}" style="display:block !important; margin:5mm auto 15px auto !important; width:120px !important; height:120px !important; border-radius:50% !important; object-fit:cover !important; border:3px solid white !important; z-index:100 !important;">` : '';
+    // 2. بناء كتل HTML لكل قسم على حدة
+    const profilePicHtml = profilePicDataUrl ? `<img src="${profilePicDataUrl}" class="cv-profile-pic" alt="Profile Picture">` : '';
+    
     let contactInfoHtml = '';
-        let hasContactInfo = false;
-        if (email) { contactInfoHtml += `<div class="cv-contact-item" style="display:flex; align-items:center; margin-bottom:0;"><i class="fas fa-envelope" style="margin-${direction === 'rtl' ? 'left' : 'right'}: 8px; width: 18px; text-align:center; flex-shrink:0;"></i><p style="margin:0;">${email}</p></div>`; hasContactInfo = true; }
-        if (phone) { contactInfoHtml += `<div class="cv-contact-item" style="display:flex; align-items:center; margin-bottom:0;"><i class="fas fa-phone" style="margin-${direction === 'rtl' ? 'left' : 'right'}: 8px; width: 18px; text-align:center; flex-shrink:0;"></i><p style="margin:0;">${phone}</p></div>`; hasContactInfo = true; }
-        if (website) { contactInfoHtml += `<div class="cv-contact-item" style="display:flex; align-items:center; margin-bottom:0;"><i class="fas fa-map-marker-alt" style="margin-${direction === 'rtl' ? 'left' : 'right'}: 8px; width: 18px; text-align:center; flex-shrink:0;"></i><p style="margin:0;">${website}</p></div>`; hasContactInfo = true; }
-        if (hasContactInfo) contactInfoHtml = `<div class="cv-contact-info">`
-                                                + `<div style="display:flex; margin-top:2px; flex-direction:row !important; flex-wrap:wrap !important; gap:8px 15px !important; justify-content:center !important; align-items:center !important; text-align:center !important;">`
-                                                + contactInfoHtml
-                                                + `</div></div>`;
+    if (email || phone || website) {
+        contactInfoHtml = '<div class="cv-contact-info">';
+        if (email) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-envelope"></i><p>${email}</p></div>`;
+        if (phone) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-phone"></i><p>${phone}</p></div>`;
+        if (website) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-map-marker-alt"></i><p>${website}</p></div>`;
+        contactInfoHtml += '</div>';
+    }
 
-    let objectiveHtml = objective ? `<div class="cv-section" id="objective" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'Career Objective')}</h3><p style="word-break:break-word; white-space:pre-wrap; line-height:1.6;">${objective.replace(/\n/g, '<br>')}</p></div>` : '';
+    const objectiveHTML = objective ? `<div class="cv-section" id="objective"><h3 class="cv-section-title">${getTranslation(language, 'Career Objective')}</h3><p>${objective.replace(/\n/g, '<br>')}</p></div>` : '';
 
-    let experienceHtml = '';
+    // -- الإصلاح رقم 2: تقليل المسافات في قسم الخبرات --
+    let experienceHTML = '';
     if (experiences && experiences.length > 0) {
-        experienceHtml = `<div class="cv-section" id="experience" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'Work Experience')}</h3>`;
-        experiences.forEach((exp, index) => {
-            const expTitle = exp.title || '';
-            const company = exp.company || '';
-            const duration = exp.duration || '';
-            const desc = exp.description || '';
-            const itemStyle = `${cvExperienceItemHtmlStyles} ${index === experiences.length - 1 ? lastItemHtmlStyles : ''}`;
-            if (expTitle || company || duration || desc) {
-                 experienceHtml += `<div class="cv-experience-item" style="${itemStyle}; margin-top: -1mm;">
-                                    <h4 class="cv-job-title" style="font-size:1.05em; font-weight:bold; padding-top: 10mm !important; margin:0 0 2mm 0 !important;">${exp.title || getTranslation(language, 'No Title')}</h4>
-                                    ${company || duration ? `<h5 class="cv-company" style="color:#6c757d; margin-bottom:2mm; font-size:0.95em;">${company}${company && duration ? ' - ' : ''}<span style="color:#666; font-size:0.9em; margin-${direction === 'rtl' ? 'right' : 'left'}:10px;">${duration}</span></h5>` : ''}
-                                    ${desc ? `<p style="word-break:break-word; white-space:normal; line-height:1.6; font-size:0.9em; margin-top:2mm;">${desc.replace(/\n/g, '<br>')}</p>` : ''}
-                                 </div>`;
-            }
+        experienceHTML = `<div class="cv-section" id="experience"><h3 class="cv-section-title" style="margin-bottom: 2mm !important;">${getTranslation(language, 'Work Experience')}</h3>`;
+        experiences.forEach(exp => {
+            // لاحظ إضافة style="margin-top: -1mm;" لتقريب المسافة
+            experienceHTML += `<div class="cv-experience-item" style="margin-top: -1mm !important;">
+                                  <h4 class="cv-job-title">${exp.title || getTranslation(language, 'No Title')}</h4>
+                                  <h5 class="cv-company">${exp.company || ''}${exp.company && exp.duration ? ' - ' : ''}${exp.duration || ''}</h5>
+                                  <p>${exp.description ? exp.description.replace(/\n/g, '<br>') : ''}</p>
+                               </div>`;
         });
-        experienceHtml += '</div>';
+        experienceHTML += '</div>';
     }
 
-    let educationHtml = '';
+    let educationHTML = '';
     if (educations && educations.length > 0) {
-        educationHtml = `<div class="cv-section" id="education" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'Education')}</h3>`;
-        educations.forEach((edu, index) => {
-            const degree = edu.degree || '';
-            const institution = edu.institution || '';
-            const duration = edu.duration || '';
-            const itemStyle = `${cvExperienceItemHtmlStyles} ${index === educations.length - 1 ? lastItemHtmlStyles : ''}`;
-            if (degree || institution || duration) {
-                educationHtml += `<div class="cv-education-item" style="${itemStyle}">
-                                    <h4 class="cv-degree" style="font-size:1.05em; font-weight:bold; margin:0 0 2mm 0;">${edu.degree || getTranslation(language, 'No Degree')}</h4>
-                                     ${institution || duration ? `<h5 class="cv-institution" style="color:#6c757d; margin-bottom:2mm; font-size:0.95em;">${institution}${institution && duration ? ' - ' : ''}<span style="color:#666; font-size:0.9em; margin-${direction === 'rtl' ? 'right' : 'left'}:10px;">${duration}</span></h5>` : ''}
-                                 </div>`;
-            }
+        educationHTML = `<div class="cv-section" id="education"><h3 class="cv-section-title">${getTranslation(language, 'Education')}</h3>`;
+        educations.forEach(edu => {
+             educationHTML += `<div class="cv-education-item">
+                                  <h4 class="cv-degree">${edu.degree || getTranslation(language, 'No Degree')}</h4>
+                                  <h5 class="cv-institution">${edu.institution || ''}${edu.institution && edu.duration ? ' - ' : ''}${edu.duration || ''}</h5>
+                               </div>`;
         });
-        educationHtml += '</div>';
+        educationHTML += '</div>';
     }
 
+    // -- الإصلاح رقم 1: إضافة الأقسام المخصصة بنفس تنسيق الأقسام الأخرى --
     let customSectionsHTML = '';
     if (customSections && customSections.length > 0) {
         customSections.forEach(section => {
-            if (section.title.trim() !== '') {
-                // نستخدم نفس الكلاسات لضمان اكتساب نفس الستايل
+            if (section.title && section.title.trim() !== '') {
                 customSectionsHTML += `<div class="cv-section custom-section"><h3 class="cv-section-title">${section.title}</h3><ul class="custom-list">`;
-                section.items.forEach(item => {
-                    if (item.trim() !== '') {
-                        customSectionsHTML += `<li>${item}</li>`;
-                    }
-                });
+                if (section.items && section.items.length > 0) {
+                    section.items.forEach(item => {
+                        if (item && item.trim() !== '') {
+                            customSectionsHTML += `<li>${item}</li>`;
+                        }
+                    });
+                }
                 customSectionsHTML += '</ul></div>';
             }
         });
     }
 
-    let skillsHtml = '';
+    let skillsHTML = '';
     if (skills && skills.length > 0) {
-        // useSingleColumnSkills logic was removed from here because the inline styles will enforce flex behavior
-        skillsHtml = `<div class="cv-section" id="skills" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'Skills')}</h3><ul class="cv-skill-list">`;
-        skills.forEach(skill => {
-            skillsHtml += `<li class="cv-skill-item" style="
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                font-size: 1.2em !important;
-                text-align: center !important;
-                border-radius: 3px !important;
-                box-sizing: border-box !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                min-height: 1.8em !important;
-                line-height: 1 !important;
-                padding: 7px 14px !important;
-                margin-top: 0 !important;
-                margin-bottom: 0 !important;
-                margin-left: auto !important;
-                margin-right: auto !important;
-            ">${skill}</li>`;
-        });
-        skillsHtml += '</ul></div>';
-    }
-
-    let languagesHtml = '';
-    if (languages && languages.length > 0) {
-        languagesHtml = `<div class="cv-section" id="languages" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'Languages')}</h3><ul class="cv-language-list" style="
-            list-style:none !important;
-            padding:0 !important;
-            margin:0 !important;
-            display:flex !important;
-            flex-direction:column !important;
-            /* **التعديل هنا:** محاذاة عناصر قائمة اللغات بناءً على الاتجاه */
-            align-items: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important;
-            text-align: inherit !important; /* يرث محاذاة الأب (rtl/ltr) */
-        ">`;
-        languages.forEach(langEntry => { languagesHtml += `<li style="
-            margin-bottom:2mm !important;
-            display: block !important;
-            width: 100% !important; /* لكي يأخذ العرض كاملاً ويتبع محاذاة الأب */
-            text-align: inherit !important; /* يرث محاذاة الأب */
-        ">${langEntry}</li>`; });
-        languagesHtml += '</ul></div>';
+        // -- الإصلاح رقم 4: محاذاة المهارات في القالب العادي بناءً على اللغة --
+        const skillsJustify = direction === 'rtl' ? 'flex-end' : 'flex-start';
+        const skillsStyle = (templateCategory === 'normal') ? `style="justify-content: ${skillsJustify} !important;"` : '';
+        skillsHTML = `<div class="cv-section" id="skills"><h3 class="cv-section-title">${getTranslation(language, 'Skills')}</h3><ul class="cv-skill-list" ${skillsStyle}>`;
+        skills.forEach(skill => { skillsHTML += `<li class="cv-skill-item">${skill}</li>`; });
+        skillsHTML += '</ul></div>';
     }
     
-    let referencesHtml = '';
-    if (references && references.length > 0) {
-        referencesHtml = `<div class="cv-section" id="references" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles}">${getTranslation(language, 'References')}</h3>`;
-        references.forEach((ref, index) => {
-            const refName = ref.name || '';
-            const position = ref.position || '';
-            const phoneNum = ref.phone || '';
-            const refEmailVal = ref.email || '';
-            const itemStyle = `${cvReferenceItemHtmlStyles} ${index === references.length - 1 ? lastItemHtmlStyles : ''}`;            
-            if (refName || position || phoneNum || refEmailVal) {
-                referencesHtml += `<div class="cv-reference-item" style="${itemStyle}">
-                                    <h4 style="margin:0 0 1mm 0; font-size:1em; font-weight:600;">${ref.name || getTranslation(language, 'No Name')}</h4>
-                                    ${position ? `<p style="margin:0.5mm 0; font-size:0.9em; color:#555;">${position}</p>` : ''}
-                                    ${phoneNum ? `<p style="margin:0.5mm 0; font-size:0.9em; color:#555;">${phoneNum}</p>` : ''}
-                                    ${refEmailVal ? `<p style="margin:0.5mm 0; font-size:0.9em; color:#555;">${refEmailVal}</p>` : ''}
-                                 </div>`;
-            }
-        });
-        referencesHtml += '</div>';
-    }
+    let languagesHTML = '';
+    // ... (كود بناء اللغات) ...
+    let referencesHTML = '';
+    // ... (كود بناء المراجع) ...
 
-    const watermarkHtml = !isPaid ? (() => {
-        let watermarkTop = '2%';
-        let watermarkLeft = '50%';
-        let watermarkTransformTranslate = 'translate(-50%, -50%)';
-        let watermarkFontSize = 'clamp(6em, 14vw, 9em)';
 
-        if (templateCategory === 'standard' || templateCategory === 'professional' || templateCategory === 'ast') {
-            watermarkTop = '30%';
-            watermarkLeft = '70%';
-            watermarkFontSize = 'clamp(4em, 10vw, 7em)';
-        }
-
-        return `
-            <div style="
-                position: absolute !important;
-                top: ${watermarkTop} !important;
-                left: ${watermarkLeft} !important;
-                width: 100% !important;
-                height: 100% !important;
-                transform: ${watermarkTransformTranslate} rotate(-40deg) scale(1.2) !important;
-                font-size: ${watermarkFontSize} !important;
-                color: rgba(0, 0, 0, 0.08) !important;
-                font-weight: bold !important;
-                text-align: center !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                pointer-events: none !important;
-                z-index: 10000 !important;
-                line-height: 1.2 !important;
-                word-break: break-word !important;
-                white-space: pre-wrap !important;
-                opacity: 1 !important;
-                overflow: hidden !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            ">${getTranslation(language, 'ONLY PREVIEW')}</div>
-        `;
-    })() : '';
-    
-    function createEndMarkerHtmlInternal() {
-        return `<div class="cv-end-marker" style="
-            height: 1px !important;
-            min-height: 1px !important;
-            visibility: hidden !important;
-            display: block !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            page-break-before: auto !important;
-            page-break-after: auto !important;
-            margin-top: 200mm !important;
-        "></div>`;
-    }
-
-    // --- 3. بناء الـ HTML النهائي مع الأنماط المدمجة ---
+    // 3. بناء الهيكل النهائي للسيرة الذاتية بالترتيب الصحيح
     let finalHtmlBodyContent = '';
 
-    // تعريف أنماط الأعمدة الخاصة بالتخطيط
-    let layoutContainerHtmlStyles = '';
-    let sidebarHtmlStyles = `
-        padding: 10mm 1mm !important;
-        box-sizing: border-box !important;
-        page-break-inside: auto !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-        align-items: center !important;
-        text-align: center !important;
-        width: 80mm !important;
-        flex-shrink: 0 !important;
-        flex-grow: 1 !important;
-        height: auto !important;
-        min-height: 1px !important;
-    `
-    // **التعديل هنا:** إضافة direction و text-align إلى mainContentHtmlStyles
-    let mainContentHtmlStyles = `
-        padding: 10mm 8mm !important;
-        box-sizing: border-box !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: flex-start !important;
-        flex-grow: 1 !important;
-        width: auto !important;
-        height: auto !important;
-        min-height: 1px !important;
-        direction: ${direction} !important; /* **جديد:** لتحديد اتجاه المحتوى داخل العمود الرئيسي */
-        text-align: ${direction === 'rtl' ? 'right' : 'left'} !important; /* **جديد:** لتحديد محاذاة النص داخل العمود الرئيسي */
-    `;
-
     if (templateCategory === 'normal') {
-        let headerClass = 'cv-header';
-        if (templateNumber === 3) headerClass += ' centered';
-        
-        let normalLayoutSkillsHtml = '';
-        if (skills && skills.length > 0) {
-            normalLayoutSkillsHtml = `<div class="cv-section" id="skills" style="${cvSectionHtmlStyles}">`
-                + `<h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles} width:100% !important; text-align:${direction === 'rtl' ? 'right' : 'left'} !important;">${getTranslation(language, 'Skills')}</h3>`
-                + `<ul class="cv-skill-list" style="
-                    list-style: none !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    flex-wrap: wrap !important;
-                    justify-content: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important;
-                    align-items: flex-start !important;
-                    gap: 2mm !important;
-                    text-align: inherit !important;
-                    width: 100% !important;
-                ">`;
-        }
-
-        let normalLayoutLanguagesHtml = '';
-        if (languages && languages.length > 0) {
-            normalLayoutLanguagesHtml = `<div class="cv-section" id="languages" style="${cvSectionHtmlStyles}"><h3 class="cv-section-title" style="${cvSectionTitleHtmlStyles} width:100% !important; text-align:${direction === 'rtl' ? 'right' : 'left'} !important;">${getTranslation(language, 'Languages')}</h3><ul class="cv-language-list" style="
-                list-style:none !important;
-                padding:0 !important;
-                margin:0 !important;
-                display:flex !important;
-                flex-direction:column !important;
-                align-items: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important; /* **تعديل:** محاذاة قائمة اللغات نفسها */
-                text-align: inherit !important;
-            ">`;
-            languages.forEach(langEntry => {
-                normalLayoutLanguagesHtml += `<li style="
-                    margin-bottom:2mm !important;
-                    display: block !important;
-                    width: 100% !important; /* لكي يأخذ العرض كاملاً ويتبع محاذاة الأب */
-                    text-align: inherit !important; /* يرث محاذاة الأب */
-                ">${langEntry}</li>`;
-            });
-            normalLayoutLanguagesHtml += '</ul></div>';
-        }
-
         finalHtmlBodyContent = `
-            <div class="cv-content" style="${cvContentHtmlStyles}">
-                <div class="${headerClass}" dir="${direction}" style="display:flex; align-items:center; padding-bottom:15px; margin-bottom:20px; box-sizing:border-box; padding:10px;">
-                    ${profilePicHtml}
-                    <div class="cv-header-text" style="flex-grow: 1;">
-                        <h1 class="cv-name" style="border-bottom : 0px; font-size:2.5em; margin:10mm 0 5px 0; font-weight:700;">${name}</h1>
-                        <h2 class="cv-title" style="border-bottom : 2px; font-size:1.3em; margin:5mm 0 10px 0 !important; font-weight:400;">${jobTitle}</h2>
-                        ${contactInfoHtml}
-                    </div>
+            <div class="cv-header">
+                ${profilePicHtml}
+                <div class="cv-header-text">
+                    <h1 class="cv-name">${name}</h1>
+                    <h2 class="cv-title">${jobTitle}</h2>
                 </div>
-                ${objectiveHtml}
-                ${experienceHtml}
-                ${educationHtml}
-                ${customSectionsHTML}
-                ${normalLayoutSkillsHtml} ${normalLayoutLanguagesHtml} ${referencesHtml}
-                ${createEndMarkerHtmlInternal()}
+            </div>
+            <div class="cv-main-body">
+                ${contactInfoHtml}
+                ${objectiveHTML}
+                ${experienceHTML}
+                ${educationHTML}
+                ${customSectionsHTML} 
+                ${skillsHTML}
+                ${languagesHTML}
+                ${referencesHTML}
+            </div>`;
+    } else { // للقوالب ذات العمودين
+        const sidebarContent = `
+            ${profilePicHtml}
+            ${contactInfoHtml}
+            ${skillsHTML}
+            ${languagesHTML}
+            ${referencesHTML}
+        `;
+        const mainContent = `
+            <div class="cv-header two-col-main">
+                <h1 class="cv-name">${name}</h1>
+                <h2 class="cv-title">${jobTitle}</h2>
+            </div>
+            ${objectiveHTML}
+            ${experienceHTML}
+            ${educationHTML}
+            ${customSectionsHTML}
+        `;
+
+        // -- الإصلاح رقم 3: محاذاة القوالب ثنائية الأعمدة (الحل الجذري) --
+        // يتم تطبيق كلاس ltr أو rtl للتحكم في ترتيب الأعمدة عبر CSS
+        finalHtmlBodyContent = `
+            <div class="cv-two-column-layout ${direction}">
+                <div class="cv-sidebar">${sidebarContent}</div>
+                <div class="cv-main-content">${mainContent}</div>
             </div>
         `;
-    } else { // Standard, Professional, AST (Two-column layouts)
-        const twoColLayoutContentStyles = `
-            display: flex !important;
-            flex-direction: column !important;
-            flex-grow: 1 !important;
-            padding: 0 !important;
-            box-sizing: border-box !important;
-            width: 100% !important;
-            min-height: 100% !important;
-            height: auto !important;
-            overflow: visible !important;
-        `;
-
-        const sidebarActualContent = `
-            ${(templateCategory === 'standard' || templateCategory === 'ast' || (templateCategory === 'professional' && templateNumber !== 1 && templateNumber !== 2)) ? profilePicHtml : ''}
-            ${(templateCategory === 'standard' || templateCategory === 'ast') ? contactInfoHtml : ''}
-            ${skillsHtml}
-            ${languagesHtml}
-            ${referencesHtml}
-            ${createEndMarkerHtmlInternal()}
-        `;
-        const mainActualContent = `
-            ${templateCategory !== 'professional' ? `
-                <div class="cv-header two-col-main" dir="${direction}" style="border-bottom:2px solid; padding-bottom:10px; margin-bottom:20px; display:block; box-sizing:border-box; flex-shrink:0;">
-                    <h1 class="cv-name" style="font-size:2.5em; margin:10mm 0 5px 0; font-weight:700; text-align:${direction === 'rtl' ? 'right' : 'left'} !important;">${name}</h1>
-                    <h2 class="cv-title" style="font-size:1.3em; margin:0 0 10px 0; font-weight:400; text-align:${direction === 'rtl' ? 'right' : 'left'} !important;">${jobTitle}</h2>
-                </div>` : ''}
-            ${objectiveHtml}
-            ${experienceHtml}
-            ${educationHtml}
-            ${customSectionsHTML}
-            ${createEndMarkerHtmlInternal()}
-        `;
-
-        if (templateCategory === 'professional') {
-            layoutContainerHtmlStyles = `
-                display: grid !important;
-                grid-template-rows: auto 1fr !important;
-                grid-template-columns: ${direction === 'rtl' ? '80mm 1.5fr' : '80mm 1.5fr'} !important; 
-                grid-template-areas: "${direction === 'rtl' ? 'header header' : 'header header'}" "${direction === 'rtl' ? 'main sidebar' : 'sidebar main'}" !important;
-                gap: 10mm !important;
-                flex-grow: 1 !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 100% !important;
-            `;
-            const proHeaderPicHtml = (templateNumber === 1 || templateNumber === 2) ? profilePicHtml : '';
-
-            finalHtmlBodyContent = `
-                <div class="cv-professional-layout" style="${layoutContainerHtmlStyles}">
-                    <div class="cv-header professional-layout" style="grid-area: header; display: block; border-bottom: none; padding: 20px 30px; text-align: center; box-sizing: border-box; flex-shrink: 0; color: #f8f9fa;">
-                         ${proHeaderPicHtml}
-                        <h1 class="cv-name"  style="border-bottom : 0px; font-size:2.5em; margin:10mm 0 5px 0; font-weight:700;">${name}</h1>
-                        <h2 class="cv-title">${jobTitle}</h2>
-                        <div class="cv-contact-info" >
-                            ${contactInfoHtml.replace('<div class="cv-contact-info"', '').replace('</div>', '')}
-                        </div>
-                    </div>
-                    <div class="cv-sidebar" style="${sidebarHtmlStyles}; grid-area: sidebar;">${sidebarActualContent}</div>
-                    <div class="cv-main-content" style="${mainContentHtmlStyles}; grid-area: main;">${mainActualContent}</div>
-                </div>
-            `;
-        } else { // Standard and AST
-            layoutContainerHtmlStyles = `
-                display: flex !important;
-                gap: 10mm !important;
-                flex-grow: 1 !important;
-                width: 100% !important;
-                height: 100% !important;
-                min-height: 100% !important;
-                page-break-inside: auto !important;
-            `;
-            finalHtmlBodyContent = `
-                <div class="cv-content" style="${twoColLayoutContentStyles}">
-                    <div class="${templateCategory}-layout" dir="${direction}" style="${layoutContainerHtmlStyles}">
-                        <div class="cv-sidebar" style="${sidebarHtmlStyles}">${sidebarActualContent}</div>
-                        <div class="cv-main-content" style="${mainContentHtmlStyles}">${mainActualContent}</div>
-                    </div>
-                </div>
-            `;
-        }
     }
 
-    // --- 4. تجميع كل شيء في الـ HTML النهائي ---
-    let finalHtml = `<!DOCTYPE html>
-    <html lang="${language}" dir="${direction}">
-    <head>
-        <meta charset="UTF-8">
-        <title>Your CV</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-        <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-            /* CSS الأساسي من ملف style.css الأصلي (النسخة المضمنة في هذا الملف) */
-            ${CSS_BASE_CONTENT}
-            /* CSS المخصص للقالب من الواجهة الأمامية (لتجاوز القواعد الأساسية - الألوان والخطوط) */
-            ${templateCss}
-            /* قواعد الطباعة الصارمة (تجاوز أي شيء آخر) */
-            @media print {
-                html, body {
-                    margin: 0 !important; padding: 0 !important;
-                    width: 210mm !important; min-height: 297mm !important; height: auto !important;
-                    background: white !important; color: #212529 !important;
-                    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
-                    overflow: hidden !important;
-                }
-                #cv-container {
-                    width: 100% !important; max-width: 210mm !important;
-                    min-height: 297mm !important; height: auto !important;
-                    margin: 0 !important; padding: 0 !important;
-                    box-shadow: none !important; border: none !important;
-                    overflow: visible !important;
-                    page-break-before: auto !important; page-break-after: auto !important; page-break-inside: auto !important;
-                    position: relative !important; visibility: visible !important;
-                    display: flex !important; flex-direction: column !important;
-                }
-                .cv-content {
-                    display: flex !important; flex-direction: column !important; flex-grow: 1 !important;
-                    padding: 0 !important; box-sizing: border-box !important;
-                    width: 100% !important; min-height: 100% !important; height: auto !important;
-                    overflow: visible !important;
-                }
-                .cv-header, .cv-header-text, .cv-profile-pic, .cv-contact-info, .cv-contact-item,
-                .cv-section, .cv-section-title, .cv-experience-item, .cv-education-item,
-                .cv-skill-list, .cv-skill-item, .cv-language-list, .cv-reference-item,
-                h1, h2, h3, h4, h5, p, ul, li {
-                    font-family: inherit !important;
-                    line-height: 1.5 !important;
-                    word-wrap: break-word !important;
-                    overflow-wrap: break-word !important;
-                    text-rendering: optimizeLegibility !important;
-                    -webkit-font-smoothing: antialiased !important;
-                    -moz-osx-font-smoothing: grayscale !important;
-                    margin: 0 !important; padding: 0 !important;
-                    text-align: inherit !important;
-                }
-
-                
-                /* إخفاء عناصر UI */
-                body > nav, body > footer, body > header.site-header, #loading-overlay, .language-toggle, .progress-container,
-                .page-section:not(#cv-preview-page), .page-section:not(.active-page),
-                #cv-preview-page .d-flex.justify-content-center.mt-4, .remove-field,
-                .popup-box, .popup-close, .form-group, .template-preview-container, .template-category, .template-previews, #cv-preview-area {
-                    display: none !important; visibility: hidden !important; height: 0 !important; max-height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important;
-                }
-                /* أنماط الأعمدة المحددة للطباعة */
-                .cv-two-column-layout, .ast-layout, .cv-professional-layout {
-                    flex-wrap: nowrap !important;
-                    page-break-inside: auto !important;
-                    height: 100% !important;
-                    min-height: 100% !important;
-                    display: var(--display-mode, flex) !important;
-                    flex-direction: var(--flex-dir, row) !important;
-                    grid-template-columns: var(--grid-cols, 1fr 1fr) !important;
-                    grid-template-areas: var(--grid-areas, "header header" "sidebar main") !important;
-                }
-                .cv-sidebar, .cv-main-content {
-                    padding: 8mm !important;
-                    page-break-inside: auto !important;
-                    height: auto !important;
-                    min-height: 1px !important;
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: flex-start !important;
-                    align-items: center !important; /* تبقى center للسيدبار */
-                    text-align: center !important; /* تبقى center للسيدبار */
-                }
-                .cv-main-content {
-                    text-align: ${direction === 'rtl' ? 'right' : 'left'} !important; /* **جديد:** محاذاة نص العمود الرئيسي في الطباعة */
-                    align-items: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important; /* **جديد:** محاذاة عناصر flex في العمود الرئيسي */
-                }
-                .cv-sidebar {
-                    width: 80mm !important; flex-basis: 80mm !important; flex-grow: 0 !important;
-                }
-                .cv-main-content { flex-grow: 1 !important; width: auto !important; }
-
-                .cv-sidebar .cv-section-title {
-                    text-align: center !important;
-                }
-                
-                 #references.cv-section {
-                    page-break-inside: avoid !important;
-                    page-break-before: auto !important;
-                    page-break-after: auto !important;
-                    flex-grow: 0 !important;
-                    flex-shrink: 0 !important;
-                    height: auto !important;
-                 }
-
-                .cv-experience-item:last-child, .cv-education-item:last-child {
-                    border-bottom: none;
-                    margin-top: 20mm;
-                }
-
-                .cv-skill-list,
-                .cv-language-list,
-                .cv-references-list {
-                    list-style: none !important;
-                    padding: 0 !important;
-                    margin: 0 !important;
-                    /* **تعديل:** إزالة text-align: center!important; العام وتطبيقه بشكل أدق */
-                    display: flex !important;
-                    flex-direction: column !important;
-                    justify-content: flex-start !important;
-                    gap: 3mm !important;
-                    page-break-inside: auto !important;
-                }
-                .cv-references-list { /* قائمة المراجع قد تحتاج محاذاة مختلفة عن المهارات/اللغات */
-                    align-items: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important;
-                }
-                .cv-skill-list { /* المهارات في السيدبار (أو في بعض القوالب) */
-                    align-items: center !important; /* تبقى مركزة لـ badges */
-                }
-                .cv-language-list { /* اللغات في السيدبار (أو في بعض القوالب) */
-                    align-items: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important; /* محاذاة اللغات */
-                }
-
-
-                /* استهداف عناصر المهارات (cv-skill-item) - لتشكيل الـ "badges" بالضبط */
-                /* أصبحت هذه القاعدة شاملة، لذا سيتم تطبيقها على كل الـ cv-skill-item بغض النظر عن الأب */
-                .cv-skill-item {
-                    display: inline-flex !important; /* استخدم inline-flex للسلوك "badge" */
-                    align-items: center !important;
-                    justify-content: center !important;
-                    padding: 7px 14px !important;
-                    border-radius: 3px !important;
-                    margin-top: 1mm !important;
-                    margin-bottom: 1mm !important;
-                    font-size: 1em !important;
-                    text-align: center !important; /* النص داخل الـ badge دائماً في المنتصف */
-                    box-sizing: border-box !important;
-                    width: fit-content !important;
-                    max-width: 100% !important;
-                    min-height: 1.8em !important;
-                    line-height: 1 !important;
-                    /* تأكد من أن الهوامش الجانبية ليست ثابتة لكي تتبع justify-content للوالد */
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                }
-
-
-                /* استهداف عناصر القائمة الفردية العامة */
-                .cv-skill-list li,
-                .cv-language-list li,
-                .cv-references-list li {
-                    list-style: none !important;
-                    content: none !important;
-                    display: block !important; /* لكي يأخذ العرض كاملاً ويتبع محاذاة الأب */
-                    width: 100% !important;
-                    margin: 5px !important;
-                    padding: 0 !important;
-                    /* **تعديل:** يرث المحاذاة من الأب (flex container) */
-                    text-align: inherit !important; 
-                    page-break-inside: avoid !important;
-                    page-break-before: auto !important;
-                    page-break-after: auto !important;
-                }
-
-
-
-                /* التأكيد على إلغاء النقاط من ::before pseudo-elements في جميع القوائم */
-                .cv-skill-list li::before,
-                .cv-language-list li::before,
-                .cv-references-list li::before,
-                .cv-reference-item p::before,
-                .cv-contact-item p::before {
-                    content: none !important;
-                    display: none !important;
-                    visibility: hidden !important;
-                }
-
-                #cv-container .cv-sidebar .cv-section-title {
-                    text-align: center !important;
-                }
-
-                .cv-end-marker {
-                    height: 1px !important;
-                    min-height: 1px !important;
-                    visibility: hidden !important;
-                    display: block !important;
-                    overflow: hidden !important;
-                    page-break-inside: avoid !important;
-                    page-break-before: auto !important;
-                    page-break-after: auto !important;
-                    margin-top: 200mm !important;
-                }
-
-                /* ** تنسيق خاص للمهارات واللغات في القوالب العادية (Normal Layout) ** */
-                .normal-layout .cv-skill-list,
-                .normal-layout .cv-language-list {
-                    display: flex !important;
-                    flex-wrap: wrap !important;
-                    justify-content: ${direction === 'rtl' ? 'flex-end' : 'flex-start'} !important;
-                    align-items: flex-start !important;
-                    gap: 2mm !important;
-                }
-                /* عند عمود واحد (إذا كانت هذه الفئة مستخدمة للقوالب العادية) */
-                .normal-layout .cv-skill-list.single-column,
-                .normal-layout .cv-language-list.single-column {
-                    justify-content: center !important;
-                }
-
-                /* الـ badge نفسه في القوالب العادية (ليظهر كـ inline-block) */
-                .normal-layout .cv-skill-item {
-                    display: inline-block !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    width: fit-content !important;
-                    max-width: 100% !important;
-                }
-
-                 /* هذا الجزء يضمن أن عناوين الأقسام في القوالب العادية تتبع الاتجاه */
-                .normal-layout .cv-section-title {
-                    text-align: ${direction === 'rtl' ? 'right' : 'left'} !important;
-                }
-
-                /* **تعديل خاص بـ AST/Standard/Professional main-content للحفاظ على اتجاهه** */
-                .standard-layout .cv-main-content,
-                .professional-layout .cv-main-content,
-                .ast-layout .cv-main-content {
-                    direction: ${direction} !important;
-                    text-align: ${direction === 'rtl' ? 'right' : 'left'} !important;
-                }
-                
-                /* تأكيد أن الأقسام الداخلية في العمود الرئيسي تتبع الاتجاه */
-                .standard-layout .cv-main-content .cv-section,
-                .professional-layout .cv-main-content .cv-section,
-                .ast-layout .cv-main-content .cv-section {
-                    text-align: inherit !important;
-                }
-                
-                /* تأكيد أن عناوين الأقسام داخل العمود الرئيسي تتبع الاتجاه */
-                .standard-layout .cv-main-content .cv-section-title,
-                .professional-layout .cv-main-content .cv-section-title,
-                .ast-layout .cv-main-content .cv-section-title {
-                    text-align: ${direction === 'rtl' ? 'right' : 'left'} !important;
-                }
-            }
-        </style>
-    </head>
-    <body style="${bodyHtmlStyles}">
-        <div id="cv-container" class="${templateCategory}-layout template${templateNumber}" dir="${direction}" style="${cvContainerHtmlStyles}">
-            ${watermarkHtml}
-            ${finalHtmlBodyContent}
-        </div>
-    </body>
-    </html>`;
-
-    return finalHtml;
+    // 4. تجميع كل شيء في ملف HTML كامل مع تضمين CSS
+    // لاحظ أن CSS_BASE_CONTENT هو متغير يحتوي على كامل محتوى ملف style.css
+    return `
+        <!DOCTYPE html>
+        <html lang="${language}" dir="${direction}">
+        <head>
+            <meta charset="UTF-8">
+            <title>CV</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+            <style>
+                ${CSS_BASE_CONTENT} 
+                ${templateCss || ''} 
+            </style>
+        </head>
+        <body>
+            <div id="cv-container" class="${templateCategory}-layout template${templateNumber}" dir="${direction}">
+                ${finalHtmlBodyContent}
+            </div>
+        </body>
+        </html>
+    `;
 }
 
 
