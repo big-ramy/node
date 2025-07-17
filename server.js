@@ -2436,67 +2436,15 @@ app.post('/api/prepare-checkout', (req, res) => {
 
 // في ملف server.js
 
-// احتفظ بـ CSS_BASE_CONTENT كما هو في ملفك
-
 app.post('/generate-cv', async (req, res) => {
-    console.log('Received request for WYSIWYG CV generation.');
+    console.log('Received request with pre-built HTML.');
     
-    // 1. استقبل البيانات الجديدة من الواجهة الأمامية
-    const { html, isPaid, language, templateCss } = req.body;
+    // الآن نستقبل متغير واحد فقط وهو fullHtml
+    const { fullHtml } = req.body;
 
-    if (!html) {
-        return res.status(400).json({ status: 'error', message: 'HTML content is missing.' });
+    if (!fullHtml) {
+        return res.status(400).json({ status: 'error', message: 'Full HTML content is missing.' });
     }
-
-    const direction = language === 'ar' ? 'rtl' : 'ltr';
-
-    // 2. قم ببناء مستند HTML كامل حول الـ HTML المستلم
-    // لا حاجة لدالة buildCvHtml المعقدة بعد الآن
-    const fullHtml = `
-        <!DOCTYPE html>
-        <html lang="${language}" dir="${direction}">
-        <head>
-            <meta charset="UTF-8">
-            <title>CV</title>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-            <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
-            <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-            <style>
-                /* 3. حقن محتوى style.css بالكامل */
-                ${CSS_BASE_CONTENT}
-                
-                /* حقن CSS الخاص بالقالب (للألوان والخطوط) */
-                ${templateCss || ''}
-
-                /* قواعد إضافية صارمة للطباعة لضمان التطابق */
-                @media print {
-                    html, body {
-                        margin: 0 !important;
-                        padding: 0 !important;
-                        background: white !important;
-                        -webkit-print-color-adjust: exact !important;
-                        print-color-adjust: exact !important;
-                    }
-                    #cv-container {
-                        margin: 0 auto !important;
-                        box-shadow: none !important;
-                        border: none !important;
-                        /* تأكد من أن الحاوية تأخذ أبعاد A4 عند الطباعة */
-                        width: 210mm !important;
-                        min-height: 297mm !important;
-                        height: auto !important; /* للسماح بالمحتوى متعدد الصفحات */
-                        page-break-before: always; /* ابدأ دائمًا في صفحة جديدة */
-                    }
-                }
-            </style>
-        </head>
-        <body class="${language === 'ar' ? 'rtl' : 'ltr'}">
-            <div id="cv-container" class="${isPaid ? '' : 'watermarked'}">
-                ${html}
-            </div>
-        </body>
-        </html>
-    `;
 
     let browser;
     try {
@@ -2506,11 +2454,18 @@ app.post('/generate-cv', async (req, res) => {
         });
         const page = await browser.newPage();
         
-        // 5. استخدم `setContent` مع الـ HTML الكامل الذي بنيته
+        // **مهم جدًا:** قم بمحاكاة وسائط الشاشة لضمان تطابق الألوان والتخطيط
+        await page.emulateMedia({ media: 'screen' });
+
+        // استخدم setContent مع الـ HTML الكامل المستلم من الواجهة الأمامية
         await page.setContent(fullHtml, { waitUntil: 'networkidle' });
+
+        // انتظر قليلاً لضمان اكتمال أي عمليات rendering أخيرة (احتياطي)
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
+            // **مهم جدًا:** هذا الخيار هو مفتاح ظهور الألوان والخلفيات
             printBackground: true,
             margin: { top: '0', right: '0', bottom: '0', left: '0' },
         });
@@ -2518,13 +2473,12 @@ app.post('/generate-cv', async (req, res) => {
         res.json({
             status: 'success',
             base64Pdf: pdfBuffer.toString('base64'),
-            message: 'PDF generated successfully from frontend HTML.'
+            message: 'PDF generated successfully from pre-built HTML.'
         });
-        console.log('PDF generated from frontend HTML and sent as base64.');
 
     } catch (error) {
-        console.error('Error generating PDF from frontend HTML:', error);
-        res.status(500).json({ status: 'error', message: 'Error generating PDF: ' + error.message });
+        console.error('Error generating PDF from pre-built HTML:', error);
+        res.status(500).json({ status: 'error', message: 'Server error during PDF conversion: ' + error.message });
     } finally {
         if (browser) {
             await browser.close();
