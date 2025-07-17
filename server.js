@@ -2119,7 +2119,7 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
 function buildCvHtml(cvData) {
     const {
         name, jobTitle, email, phone, website, profilePicDataUrl,
-        objective, experiences, educations, skills, languages, references,
+        objective, experiences, educations, customSections, skills, languages, references,
         templateCategory, templateNumber, language, isPaid, templateCss // templateCss سيستمر في تمرير الأنماط الجمالية
     } = cvData;
 
@@ -2237,7 +2237,7 @@ function buildCvHtml(cvData) {
             const desc = exp.description || '';
             const itemStyle = `${cvExperienceItemHtmlStyles} ${index === experiences.length - 1 ? lastItemHtmlStyles : ''}`;
             if (expTitle || company || duration || desc) {
-                 experienceHtml += `<div class="cv-experience-item" style="${itemStyle}">
+                 experienceHtml += `<div class="cv-experience-item" style="${itemStyle}; margin-top: -1mm;">
                                     <h4 class="cv-job-title" style="font-size:1.05em; font-weight:bold; padding-top: 10mm !important; margin:0 0 2mm 0 !important;">${exp.title || getTranslation(language, 'No Title')}</h4>
                                     ${company || duration ? `<h5 class="cv-company" style="color:#6c757d; margin-bottom:2mm; font-size:0.95em;">${company}${company && duration ? ' - ' : ''}<span style="color:#666; font-size:0.9em; margin-${direction === 'rtl' ? 'right' : 'left'}:10px;">${duration}</span></h5>` : ''}
                                     ${desc ? `<p style="word-break:break-word; white-space:normal; line-height:1.6; font-size:0.9em; margin-top:2mm;">${desc.replace(/\n/g, '<br>')}</p>` : ''}
@@ -2263,6 +2263,22 @@ function buildCvHtml(cvData) {
             }
         });
         educationHtml += '</div>';
+    }
+
+    let customSectionsHTML = '';
+    if (customSections && customSections.length > 0) {
+        customSections.forEach(section => {
+            if (section.title.trim() !== '') {
+                // نستخدم نفس الكلاسات لضمان اكتساب نفس الستايل
+                customSectionsHTML += `<div class="cv-section custom-section"><h3 class="cv-section-title">${section.title}</h3><ul class="custom-list">`;
+                section.items.forEach(item => {
+                    if (item.trim() !== '') {
+                        customSectionsHTML += `<li>${item}</li>`;
+                    }
+                });
+                customSectionsHTML += '</ul></div>';
+            }
+        });
     }
 
     let skillsHtml = '';
@@ -2444,27 +2460,6 @@ function buildCvHtml(cvData) {
                     text-align: inherit !important;
                     width: 100% !important;
                 ">`;
-            skills.forEach(skill => {
-                normalLayoutSkillsHtml += `<li class="cv-skill-item" style="
-                    display: inline-flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    padding: 5px 10px !important;
-                    border-radius: 15px !important;
-                    margin-bottom: 2mm !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    font-size: 0.9em !important;
-                    text-align: center !important;
-                    box-sizing: border-box !important;
-                    width: fit-content !important;
-                    max-width: 100% !important;
-                    min-height: 1.5em !important;
-                    line-height: 1.2 !important;
-                ">${skill}</li>`;
-            });
-            normalLayoutSkillsHtml += '</ul></div>';
-        }
 
         let normalLayoutLanguagesHtml = '';
         if (languages && languages.length > 0) {
@@ -2501,6 +2496,7 @@ function buildCvHtml(cvData) {
                 ${objectiveHtml}
                 ${experienceHtml}
                 ${educationHtml}
+                ${customSectionsHTML}
                 ${normalLayoutSkillsHtml} ${normalLayoutLanguagesHtml} ${referencesHtml}
                 ${createEndMarkerHtmlInternal()}
             </div>
