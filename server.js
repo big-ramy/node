@@ -2460,6 +2460,7 @@ function buildCvHtml(cvData) {
                     text-align: inherit !important;
                     width: 100% !important;
                 ">`;
+        }
 
         let normalLayoutLanguagesHtml = '';
         if (languages && languages.length > 0) {
@@ -2531,6 +2532,7 @@ function buildCvHtml(cvData) {
             ${objectiveHtml}
             ${experienceHtml}
             ${educationHtml}
+            ${customSectionsHTML}
             ${createEndMarkerHtmlInternal()}
         `;
 
