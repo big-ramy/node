@@ -68,11 +68,10 @@ body {
     color: #333;
     margin: 0;
     padding: 0;
-    direction: rtl; /* Default direction */
-    text-align: right; /* Default text alignment */
-    overflow-y: auto; /* Allow scrolling on the body for landing page */
-    font-size: 11pt; /* Global base font size increased */
-    line-height: 1.5; /* Global line spacing adjusted */
+    direction: rtl; 
+    text-align: right; 
+    overflow-y: auto; 
+    padding-top: 40px; /* <<< هذا السطر هو الإضافة المهمة */
 }
 
 /* Language direction classes */
@@ -166,7 +165,7 @@ body[dir="ltr"] .dropdown-menu {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('header-background.jpeg');
+    background-image: url('header-background.jpeg.webp');
     background-size: cover;
     background-position: center;
     filter: brightness(0.5);
@@ -433,6 +432,8 @@ body[dir="ltr"] .remove-field {
     margin-right: 10px;
 }
 
+
+
 body[dir="ltr"] .language-toggle {
     margin-right: 0;
     margin-left: 10px;
@@ -536,8 +537,7 @@ body[dir="ltr"] .template-preview-container {
     /* لا تضع هنا position: absolute; left: -9999px; visibility: hidden; */
     /* هذه ستتم إدارتها بواسطة JavaScript مؤقتًا */
     font-family: 'Segoe UI', Arial, sans-serif; /* خط افتراضي إذا لم يحدده القالب */
-    line-height: 1.5; /* Adjusted line spacing */
-    font-size: 11pt; /* Adjusted base font size */
+    line-height: 1.6;
 }
 
 /* Watermark style - يتم التحكم في إضافته عبر JavaScript (.watermarked class) */
@@ -553,7 +553,7 @@ body[dir="ltr"] .template-preview-container {
     width: 200% !important; /* اجعلها كبيرة جداً لتغطي حتى لو امتدت لعدة صفحات */
     height: 200% !important;
     transform: translate(-50%, -50%) rotate(-40deg) scale(0.9) !important;
-    font-size: clamp(2.5em, 10vw, 5em) !important; /* Larger watermark size */
+    font-size: clamp(2em, 8vw, 4.5em) !important; /* حجم خط متجاوب وواضح */
     color: rgba(0, 0, 0, 0.08) !important; /* لون خفيف جداً لكن مرئي */
     font-weight: bold !important;
     text-align: center !important;
@@ -645,6 +645,10 @@ body[dir="ltr"] .template-preview-container {
     gap: 15px;
 }
 
+.justify-content-around img{
+    width: 100px;
+}
+
 .cv-header.professional-layout .cv-contact-item {
     justify-content: center;
     margin-bottom: 0;
@@ -669,6 +673,7 @@ body[dir="ltr"] .cv-header.professional-layout .cv-contact-item i {
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid; /* سيتم تخصيص اللون بواسطة القوالب */
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
     margin-left: 20px; /* RTL default */
     flex-shrink: 0;
 }
@@ -682,6 +687,8 @@ body[dir="ltr"] .cv-profile-pic {
     display: flex;
     align-items: center;
 }
+
+/* لا حاجة لقواعد اتجاه إضافية هنا إذا كانت القاعدة العامة أعلاه كافية */
 
 .cv-header.centered .cv-profile-pic,
 .cv-header.professional-layout .cv-profile-pic { /* Picture in professional header (if any) */
@@ -735,7 +742,7 @@ body[dir="ltr"] .cv-profile-pic {
 
 body[dir="ltr"] .cv-contact-item i {
     margin-left: 0;
-    margin-right: 8px;
+    margin-right: 8px; /* LTR */
 }
 
 .cv-contact-item p {
@@ -819,7 +826,7 @@ body[dir="ltr"] .cv-duration {
 .cv-education-item p { /* أي تفاصيل إضافية للمؤهل */
     word-break: break-word;
     white-space: normal; /* أو pre-wrap إذا أردت الحفاظ على الأسطر الجديدة من textarea */
-    line-height: 1.5; /* Adjusted line spacing */
+    line-height: 1.6;
     font-size: 0.9em; /* حجم خط أصغر قليلاً للوصف */
     margin-top: 2mm;
 }
@@ -910,51 +917,57 @@ body[dir="ltr"] .cv-skill-item {
 .cv-section#objective p {
     word-break: break-word;
     white-space: normal; /* أو pre-wrap إذا أردت الحفاظ على الأسطر من textarea */
-    line-height: 1.5; /* Adjusted line spacing */
+    line-height: 1.6;
 }
 
 /* --- Two-Column Layouts (Standard, Professional, AST) --- */
 /* هذه هي الحاويات الرئيسية للتخطيطات متعددة الأعمدة */
 .cv-two-column-layout,
+.cv-professional-layout, /* professional-layout قد يستخدم grid أكثر من flex مباشر */
 .ast-layout {
     flex-grow: 1 !important;
     display: flex; /* Flex هو الأساس لمعظم التخطيطات ثنائية الأعمدة */
     gap: 10mm; /* فجوة بين الأعمدة، يمكن تعديلها */
-    overflow: visible; /* السماح بتجاوز المحتوى */
+    /* overflow: hidden; لا نضع overflow:hidden هنا، يجب أن يكون المحتوى مرئيًا بالكامل للطباعة */
 }
 
 /* ترتيب الأعمدة الصحيح لـ RTL/LTR */
+/* Note: script.js may also set dir attribute directly on elements */
 .cv-two-column-layout[dir="rtl"],
 .ast-layout[dir="rtl"] {
-    flex-direction: row-reverse; /* الشريط الجانبي (الأول في DOM) سيكون على اليمين */
+    flex-direction: row; /* الشريط الجانبي (الأول في DOM) سيكون على اليمين */
 }
 
 .cv-two-column-layout[dir="ltr"],
 .ast-layout[dir="ltr"] {
-    flex-direction: row; /* الشريط الجانبي (الأول في DOM) سيكون على اليسار */
+    flex-direction: row-reverse; /* الشريط الجانبي (الأول في DOM) سيكون على اليسار */
 }
 
 /* Professional Layout uses Grid */
-/* تم تعديل هذا القسم ليتبع اتجاه اللغة في المعاينة والطباعة */
+/* تم تعديل هذا القسم لجعل الشريط الجانبي دائماً على اليسار في معاينة المتصفح */
 .cv-professional-layout {
     display: grid !important; /* استخدام grid للتخطيط الاحترافي */
     grid-template-rows: auto 1fr; /* صف للرأس، والباقي للأعمدة */
     gap: 10mm !important; /* فجوة بين مناطق الشبكة */
-    overflow: visible; /* السماح بتجاوز المحتوى */
-}
-
-.cv-professional-layout[dir="rtl"] {
-    grid-template-columns: 1fr 80mm; /* المحتوى الرئيسي على اليسار، الشريط الجانبي على اليمين بعرض 80mm */
+    grid-template-columns: 80mm 1fr; /* الشريط الجانبي على اليسار بعرض 80mm، المحتوى الرئيسي على اليمين لكلا الاتجاهين */
     grid-template-areas:
         "header header"
-        "main sidebar";
+        "sidebar main";
+}
+
+/* هذا التغيير لا يعتمد على الـ dir، لجعل الشريط الجانبي دائماً على اليسار في المعاينة */
+.cv-professional-layout[dir="rtl"] {
+    grid-template-columns: 80mm 1fr; /* الشريط الجانبي على اليسار بعرض 80mm، المحتوى الرئيسي على اليمين */
+    grid-template-areas:
+        "header header"
+        "sidebar main"; /* sidebar main */
 }
 
 .cv-professional-layout[dir="ltr"] {
     grid-template-columns: 80mm 1fr; /* الشريط الجانبي على اليسار بعرض 80mm، المحتوى الرئيسي على اليمين */
     grid-template-areas:
         "header header"
-        "sidebar main";
+        "sidebar main"; /* sidebar main */
 }
 
 
@@ -969,7 +982,7 @@ body[dir="ltr"] .cv-skill-item {
     flex-grow: 1; /* اسمح لهما بالتمدد لملء المساحة المتاحة */
     min-height: calc(297mm - 40mm); /* ارتفاع افتراضي لضمان الامتداد (A4 - padding top/bottom of container - header) */
                                   /* يجب ضبط هذا بعناية، أو الاعتماد على flex-grow */
-    overflow: visible !important; /* هام جداً للطباعة */
+    overflow: visible !important; /* إبقاء هذا للعرض على الشاشة، الطباعة ستتجاوزه */
 }
 
 /* Sidebar in Standard and AST Layout */
@@ -1009,7 +1022,7 @@ body[dir="ltr"] .cv-skill-item {
 }
 .cv-two-column-layout .cv-sidebar .cv-section-title,
 .ast-layout .cv-sidebar .cv-section-title {
-    border-bottom-color: #dee2e6; color: #6c757d;
+    color: #6c757d; border-bottom-color: #dee2e6;
 }
 .cv-two-column-layout .cv-sidebar .cv-contact-item i,
 .ast-layout .cv-sidebar .cv-contact-item i { color: #6c757d; }
@@ -1081,11 +1094,11 @@ body[dir="ltr"] .cv-skill-item {
 .normal-layout.template1 .cv-header { background-color: #0056b3; color: #e9ecef; border-bottom: 4px solid #004085; padding: 20px; border-radius: 8px 8px 0 0; }
 .normal-layout.template1 .cv-name { color: #ffffff; font-family: 'Roboto', sans-serif; font-weight: 900; font-size: 2em; }
 .normal-layout.template1 .cv-title { color: #ffff; font-family: 'Roboto', sans-serif; font-weight: 400; font-size: 1.1em; }
-.normal-layout.template1 .cv-contact-item i { color: #ffff; }
+.normal-layout.template1 .cv-contact-item i { color: #ffff; } /* Removed margin-right here, handled by general .cv-contact-item i */
 .normal-layout.template1 .cv-section-title { color: #004085; border-bottom-color: #cce5ff; font-family: 'Roboto', sans-serif; font-weight: 700; }
 .normal-layout.template1 .cv-profile-pic { border: 4px solid #ffffff; }
-.normal-layout.template1 #cv-container { font-family: 'Roboto', sans-serif; color: #343a40; }
-.normal-layout.template1 .cv-contact-item { font-family: 'Roboto', sans-serif; color: #ffffff; }
+.normal-layout.template1 #cv-container { font-family: 'Roboto', sans-serif; color: #343a40; } /* This targets the whole container */
+.normal-layout.template1 .cv-contact-item { font-family: 'Roboto', sans-serif; color: #ffffff; } /* Specific contact item color */
 
 /* ... (Repeat for template2 to template12 for normal-layout) ... */
 .normal-layout.template2 .cv-header { background-color: #f0f0f0; color: #333; border-bottom: 4px solid #555; padding: 20px; border-radius: 8px 8px 0 0; }
@@ -1139,22 +1152,22 @@ body[dir="ltr"] .cv-skill-item {
 
 .normal-layout.template8 .cv-header { background-color: #fcf8e3; color: #856404; border-bottom: 4px solid #d39e00; padding: 20px; border-radius: 8px 8px 0 0; }
 .normal-layout.template8 .cv-name { color: #664d03; font-family: 'Noto Serif', serif; font-weight: 900; font-size: 2em; }
-.normal-layout.template8 .cv-title { color: #a17e1a; font-family: 'Noto Serif', serif; font-size: 1.1em; font-weight: 400; }
+.normal-layout.template8 .cv-title { color: #a17e1a; font-family: 'Noto Serif', serif; font-weight: 400; font-size: 1.1em; }
 .normal-layout.template8 .cv-contact-item i { color: #a17e1a; }
 .normal-layout.template8 .cv-section-title { color: #a17e1a; border-bottom-color: #fff3cd; font-family: 'Noto Serif', serif; font-weight: 700; }
 .normal-layout.template8 .cv-profile-pic { border-color: #856404; border-width: 4px; }
 .normal-layout.template8 #cv-container { font-family: 'Noto Serif', serif; color: #383d41; }
 
 .normal-layout.template9 .cv-header { background-color: #eaf4f4; color: #004d40; border-bottom: 4px solid #00796b; padding: 20px; border-radius: 8px 8px 0 0; }
-.normal-layout.template9 .cv-name { color: #00332c; font-family: 'PT Sans', sans-serif; font-size: 2em; font-weight: 900; }
+.normal-layout.template9 .cv-name { color: #00332c; font-weight: 900; font-family: 'PT Sans', sans-serif; font-size: 2em; }
 .normal-layout.template9 .cv-title { color: #00796b; font-family: 'PT Sans', sans-serif; font-weight: 400; font-size: 1.1em; }
 .normal-layout.template9 .cv-contact-item i { color: #00796b; }
 .normal-layout.template9 .cv-section-title { color: #00796b; border-bottom-color: #b2dfdb; font-family: 'PT Sans', sans-serif; font-weight: 700; }
-.normal-layout.template9 .cv-profile-pic { border: 4px solid #004d40; }
+.normal-layout.template9 .cv-profile-pic { border-color: #004d40; border-width: 4px; }
 .normal-layout.template9 #cv-container { font-family: 'PT Sans', sans-serif; color: #212121; }
 
 .normal-layout.template10 .cv-header { background-color: #f8f9fa; color: #17a2b8; border-bottom: 4px solid #138496; padding: 20px; border-radius: 8px 8px 0 0; }
-.normal-layout.template10 .cv-name { color: #212529; font-family: 'Arial', sans-serif; font-size: 2em; font-weight: 900; }
+.normal-layout.template10 .cv-name { color: #212529; font-family: 'Arial', sans-serif; font-weight: 900; font-size: 2em; }
 .normal-layout.template10 .cv-title { color: #17a2b8; font-family: 'Arial', sans-serif; font-weight: 400; font-size: 1.1em; }
 .normal-layout.template10 .cv-contact-item i { color: #17a2b8; }
 .normal-layout.template10 .cv-section-title { color: #138496; border-bottom-color: #d1ecf1; font-family: 'Arial', sans-serif; font-weight: 700; }
@@ -1162,7 +1175,7 @@ body[dir="ltr"] .cv-skill-item {
 .normal-layout.template10 #cv-container { font-family: 'Arial', sans-serif; color: #343a40; }
 
 .normal-layout.template11 .cv-header { background-color: #f0e0d4; color: #7f4f24; border-bottom: 4px solid #a27b5c; padding: 20px; border-radius: 8px 8px 0 0; }
-.normal-layout.template11 .cv-name { color: #633c1c; font-family: 'Georgia', serif; font-size: 2em; font-weight: 900; }
+.normal-layout.template11 .cv-name { color: #633c1c; font-family: 'Georgia', serif; font-weight: 900; font-size: 2em; }
 .normal-layout.template11 .cv-title { color: #a27b5c; font-family: 'Georgia', serif; font-weight: 400; font-size: 1.1em; }
 .normal-layout.template11 .cv-contact-item i { color: #a27b5c; }
 .normal-layout.template11 .cv-section-title { color: #a27b5c; border-bottom-color: #eaddd7; font-family: 'Georgia', serif; font-weight: 700; }
@@ -1174,16 +1187,21 @@ body[dir="ltr"] .cv-skill-item {
 .normal-layout.template12 .cv-title { color: #495057; font-family: 'Verdana', sans-serif; font-weight: 400; font-size: 1.1em; }
 .normal-layout.template12 .cv-contact-item i { color: #495057; }
 .normal-layout.template12 .cv-section-title { color: #6c757d; border-bottom-color: #dee2e6; font-family: 'Verdana', sans-serif; font-weight: 700; }
-.normal-layout.template12 .cv-profile-pic { border: 4px solid #343a40; border-width: 4px; }
+.normal-layout.template12 .cv-profile-pic { border-color: #343a40; border-width: 4px; }
 .normal-layout.template12 #cv-container { font-family: 'Verdana', sans-serif; color: #212529; }
 
 
 /* --- Standard Layout Templates --- */
-.standard-layout .cv-sidebar {
-    width: 250px;
-    padding: 20px;
+/* (Your existing .standard-layout.template1 to template12 styles go here) */
+/* Example for one, apply to all */
+.standard-layout #cv-container { /* Global for standard layout, maybe not needed if layout div handles flex */
+    /* display: flex; flex-direction: row; No, layout div below handles this */
+}
+.standard-layout .cv-sidebar { /* Applied by script.js */
+    width: 250px; /* This might be overridden by print styles (80mm) */
+    padding: 20px; /* General padding, print styles use mm */
     flex-shrink: 0;
-    border-radius: 8px 0 0 8px;
+    border-radius: 8px 0 0 8px; /* RTL default */
 }
 .standard-layout[dir="rtl"] .cv-sidebar { border-radius: 0 8px 8px 0; }
 .standard-layout .cv-main-content { flex-grow: 1; padding: 20px; }
@@ -1197,7 +1215,7 @@ body[dir="ltr"] .cv-skill-item {
 .standard-layout.template1 .cv-main-content .cv-name { color: #212529; font-family: 'Open Sans', sans-serif; font-weight: 900; font-size: 1.8em; }
 .standard-layout.template1 .cv-main-content .cv-title { color: #007bff; font-family: 'Open Sans', sans-serif; font-weight: 400; font-size: 1em; }
 .standard-layout.template1 .cv-main-content .cv-section-title { color: #007bff; border-bottom-color: #e9ecef; font-family: 'Open Sans', sans-serif; font-weight: 700; }
-.standard-layout.template1 .cv-profile-pic { border: 4px solid #fff; }
+.standard-layout.template1 .cv-profile-pic { border: 4px solid #fff; } /* Sidebar profile pic */
 .standard-layout.template1 #cv-container { font-family: 'Open Sans', sans-serif; color: #343a40; }
 
 
@@ -1337,8 +1355,12 @@ body[dir="ltr"] .cv-skill-item {
 
 
 /* --- Professional Layout Templates --- */
+/* (Your existing .professional-layout.template1 to template12 styles go here) */
+/* Example for one, apply to all */
+.professional-layout #cv-container { /* Global for pro layout, layout div below handles structure */
+}
 .professional-layout .cv-sidebar {
-    width: 250px;
+    width: 250px; /* overridden by print styles (80mm) & grid */
     padding: 20px;
     flex-shrink: 0;
     border-radius: 8px 0 0 8px;
@@ -1350,14 +1372,15 @@ body[dir="ltr"] .cv-skill-item {
 .professional-layout.template1 .cv-name { color: #fff; font-family: 'Open Sans', sans-serif; font-size: 2.8em; margin-bottom: 5px; font-weight: 900; }
 .professional-layout.template1 .cv-title { color: #cce5ff; font-family: 'Open Sans', sans-serif; font-size: 1.3em; font-weight: 400; }
 .professional-layout.template1 .cv-contact-info { border-top: 1px solid #0056b3; margin-top: 15px; padding-top: 15px; }
-.professional-layout.template1 .cv-contact-item { color: #ffffff; font-size: 0.9em; }
+.professional-layout.template1 .cv-contact-item { color: #ffffff; font-size: 0.9em; } /* Removed margin-right, use gap in .cv-contact-info */
 .professional-layout.template1 .cv-contact-item i { color: #cce5ff; }
 .professional-layout.template1 .cv-sidebar { background-color: #f8f9fa; color: #495057; font-family: 'Open Sans', sans-serif; border-right: 5px solid #004085; }
 .professional-layout.template1[dir="ltr"] .cv-sidebar { border-right: none; border-left: 5px solid #004085; }
 .professional-layout.template1 .cv-sidebar .cv-profile-pic { border: 4px solid #007bff; margin-bottom: 20px; }
 .professional-layout.template1 .cv-sidebar .cv-section-title { color: #004085; border-bottom-color: #e9ecef; font-weight: 700; }
+/* .professional-layout.template1 .cv-sidebar .cv-contact-item ... (Sidebar contact info, if different from header) */
 .professional-layout.template1 .cv-sidebar .cv-skill-item { background-color: #e0e9f3; color: #007bff; padding: 5px 10px; margin: 5px 0; border-radius: 3px; font-size: 0.9em; }
-.professional-layout.template1 .cv-main-content { padding: 20px; }
+.professional-layout.template1 .cv-main-content { padding: 20px; } /* Padding for main content area */
 .professional-layout.template1 .cv-main-content .cv-section-title { color: #004085; border-bottom-color: #cce5ff; font-family: 'Open Sans', sans-serif; font-weight: 700; }
 .professional-layout.template1 #cv-container { font-family: 'Open Sans', sans-serif; color: #343a40; }
 
@@ -1366,7 +1389,7 @@ body[dir="ltr"] .cv-skill-item {
 .professional-layout.template2 .cv-header.professional-layout { background-color: #343a40; color: #ffffff; padding: 30px 20px; border-radius: 8px 8px 0 0; grid-area: header;}
 .professional-layout.template2 .cv-name { color: #fff; font-family: 'Roboto', sans-serif; font-size: 2.8em; margin-bottom: 5px; font-weight: 900; }
 .professional-layout.template2 .cv-title { color: #ced4da; font-family: 'Roboto', sans-serif; font-size: 1.3em; font-weight: 400; }
-.professional-layout.template2 .cv-contact-info { border-top: 1px solid rgba(255, 255, 255, 0.3); margin-top: 15px; padding-top: 15px; }
+.professional-layout.template2 .cv-contact-info { border-top: 1px solid #495057; margin-top: 15px; padding-top: 15px; }
 .professional-layout.template2 .cv-contact-item { color: #ffffff; font-size: 0.9em; }
 .professional-layout.template2 .cv-contact-item i { color: #adb5bd; }
 .professional-layout.template2 .cv-sidebar { background-color: #f0f0f0; color: #495057; font-family: 'Roboto', sans-serif; border-right: 5px solid #495057; }
@@ -1429,7 +1452,7 @@ body[dir="ltr"] .cv-skill-item {
 .professional-layout.template6[dir="ltr"] .cv-sidebar { border-right: none; border-left: 5px solid #ffc107; }
 .professional-layout.template6 .cv-sidebar .cv-profile-pic { border: 4px solid #ffc107; }
 .professional-layout.template6 .cv-sidebar .cv-section-title { color: #ffc107; border-bottom-color: #ffeeba; }
-.professional-layout.template6 .cv-sidebar .cv-skill-item { background-color: #ffeeba; color: #ffc107; }
+.professional-layout.template6 .cv-sidebar .cv-skill-item { background-color: #ffeeba; color: #ffc107; } /* Changed from #ffc107 to #664d03 for better contrast if needed */
 .professional-layout.template6 .cv-main-content .cv-section-title { color: #d39e00; border-bottom-color: #fff3cd; font-family: 'Arial', sans-serif; font-weight: 700; }
 .professional-layout.template6 #cv-container { font-family: 'Arial', sans-serif; color: #343a40; }
 
@@ -1447,13 +1470,13 @@ body[dir="ltr"] .cv-skill-item {
 .professional-layout.template7 .cv-main-content .cv-section-title { color: #004085; border-bottom-color: #a2cbfd; font-family: 'Arial', sans-serif; font-weight: 700; }
 .professional-layout.template7 #cv-container { font-family: 'Arial', sans-serif; color: #212121; }
 
-.professional-layout.template8 .cv-header.professional-layout{ background-color: #343a40; color: #ffffff; padding: 30px 20px; border-radius: 8px 8px 0 0; grid-area: header;}
+.professional-layout.template8 .cv-header.professional-layout{ background-color: #343a40; color: #ffffff; /* Corrected color for text */ padding: 30px 20px; border-radius: 8px 8px 0 0; grid-area: header;}
 .professional-layout.template8 .cv-name { color: #fff; font-family: 'Segoe UI', sans-serif; font-size: 2.8em; margin-bottom: 5px; font-weight: 900; }
 .professional-layout.template8 .cv-title { color: #dee2e6; font-family: 'Segoe UI', sans-serif; font-size: 1.3em; font-weight: 400; }
-.professional-layout.template8 .cv-contact-info { border-top: 1px solid #6c757d; }
+.professional-layout.template8 .cv-contact-info { border-top: 1px solid #6c757d; } /* Slightly lighter border */
 .professional-layout.template8 .cv-contact-item { color: #fff; }
 .professional-layout.template8 .cv-contact-item i { color: #dee2e6; }
-.professional-layout.template8 .cv-sidebar { background-color: #495057; color: #f8f9fa; font-family: 'Segoe UI', sans-serif; border-right: 5px solid #343a40; }
+.professional-layout.template8 .cv-sidebar { background-color: #495057; /* Darker sidebar */ color: #f8f9fa; font-family: 'Segoe UI', sans-serif; border-right: 5px solid #343a40; }
 .professional-layout.template8[dir="ltr"] .cv-sidebar { border-right: none; border-left: 5px solid #343a40; }
 .professional-layout.template8 .cv-sidebar .cv-profile-pic { border: 4px solid #f8f9fa; }
 .professional-layout.template8 .cv-sidebar .cv-section-title { color: #f8f9fa; border-bottom-color: #6c757d; }
@@ -1519,8 +1542,12 @@ body[dir="ltr"] .cv-skill-item {
 
 
 /* --- AST Layout Templates --- */
+/* (Your existing .ast-layout.template1 to template12 styles go here) */
+/* Example for one, apply to all */
+.ast-layout #cv-container { /* Global for ast layout, layout div below handles structure */
+}
 .ast-layout .cv-sidebar {
-    width: 250px;
+    width: 250px; /* overridden by print (80mm) */
     padding: 20px;
     flex-shrink: 0;
     border-radius: 8px 0 0 8px;
@@ -1529,15 +1556,15 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout .cv-main-content { flex-grow: 1; padding: 20px; }
 
 .ast-layout.template1 .cv-sidebar { background-color: #00acc1; color: #ffffff; font-family: 'Segoe UI', sans-serif; }
-.ast-layout.template1 .cv-sidebar .cv-section { background-color: #00acc1; color: #ffffff; font-family: 'Segoe UI', sans-serif; }
+.ast-layout.template1 .cv-sidebar .cv-section { background-color: #00acc1; color: #ffffff; font-family: 'Segoe UI', sans-serif; } /* Should sections inside sidebar also have this? */
 .ast-layout.template1 .cv-sidebar .cv-section-title { color: #ffffff; border-bottom-color: #00838f; font-weight: 700; }
-.ast-layout.template1 .cv-sidebar .cv-contact-item { margin-bottom: 10px; color: #e0f2f7; }
+.ast-layout.template1 .cv-sidebar .cv-contact-item { margin-bottom: 10px; color: #e0f7fa; }
 .ast-layout.template1 .cv-sidebar .cv-contact-item i { color: #4dd0e1; }
-.ast-layout.template1 .cv-sidebar .cv-contact-item p { color: #e0f2f7; }
+.ast-layout.template1 .cv-sidebar .cv-contact-item p { color: #e0f7fa; }
 .ast-layout.template1 .cv-sidebar .cv-skill-item { background-color: #4dd0e1; color: #004d40; padding: 5px 10px; margin: 5px 0; border-radius: 3px; font-size: 0.9em; }
-.ast-layout.template1 .cv-sidebar .cv-language-list li { color: #e0f2f7; }
+.ast-layout.template1 .cv-sidebar .cv-language-list li { color: #e0f7fa; }
 .ast-layout.template1 .cv-sidebar .cv-reference-item h4,
-.ast-layout.template1 .cv-sidebar .cv-reference-item p { color: #e0f2f7; }
+.ast-layout.template1 .cv-sidebar .cv-reference-item p { color: #e0f7fa; }
 .ast-layout.template1 .cv-main-content .cv-header.two-col-main { border-bottom: 4px solid #00acc1; }
 .ast-layout.template1 .cv-main-content .cv-name { color: #006064; font-family: 'Segoe UI', sans-serif; font-weight: 900; font-size: 1.8em; }
 .ast-layout.template1 .cv-main-content .cv-title { color: #00acc1; font-family: 'Segoe UI', sans-serif; font-weight: 400; font-size: 1em; }
@@ -1607,7 +1634,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template5 .cv-main-content .cv-name { color: #01579b; }
 .ast-layout.template5 .cv-main-content .cv-title { color: #03a9f4; }
 .ast-layout.template5 .cv-main-content .cv-section-title { color: #03a9f4; border-bottom-color: #e1f5fe; }
-    .ast-layout.template5 #cv-container { font-family: 'Lato', sans-serif; color: #212121; }
+.ast-layout.template5 #cv-container { font-family: 'Lato', sans-serif; color: #212121; }
 
 /* AST Template 6 */
 .ast-layout.template6 .cv-sidebar { background-color: #ff5722; color: #ffffff; font-family: 'Ubuntu', sans-serif; }
@@ -1623,7 +1650,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template6 .cv-main-content .cv-name { color: #bf360c; }
 .ast-layout.template6 .cv-main-content .cv-title { color: #ff5722; }
 .ast-layout.template6 .cv-main-content .cv-section-title { color: #ff5722; border-bottom-color: #fbe9e7; }
-    .ast-layout.template6 #cv-container { font-family: 'Ubuntu', sans-serif; color: #212121; }
+.ast-layout.template6 #cv-container { font-family: 'Ubuntu', sans-serif; color: #212121; }
 
 /* AST Template 7 */
 .ast-layout.template7 .cv-sidebar { background-color: #795548; color: #ffffff; font-family: 'Quicksand', sans-serif; }
@@ -1639,7 +1666,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template7 .cv-main-content .cv-name { color: #3e2723; }
 .ast-layout.template7 .cv-main-content .cv-title { color: #795548; }
 .ast-layout.template7 .cv-main-content .cv-section-title { color: #795548; border-bottom-color: #efebe9; }
-    .ast-layout.template7 #cv-container { font-family: 'Quicksand', sans-serif; color: #5a5251; }
+.ast-layout.template7 #cv-container { font-family: 'Quicksand', sans-serif; color: #5a5251; }
 
 /* AST Template 8 */
 .ast-layout.template8 .cv-sidebar { background-color: #607d8b; color: #ffffff; font-family: 'Noto Serif', serif; }
@@ -1655,7 +1682,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template8 .cv-main-content .cv-name { color: #263238; }
 .ast-layout.template8 .cv-main-content .cv-title { color: #607d8b; }
 .ast-layout.template8 .cv-main-content .cv-section-title { color: #607d8b; border-bottom-color: #eceff1; }
-    .ast-layout.template8 #cv-container { font-family: 'Noto Serif', serif; color: #37474f; }
+.ast-layout.template8 #cv-container { font-family: 'Noto Serif', serif; color: #37474f; }
 
 /* AST Template 9 */
 .ast-layout.template9 .cv-sidebar { background-color: #e91e63; color: #ffffff; font-family: 'Playfair Display', serif; }
@@ -1671,7 +1698,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template9 .cv-main-content .cv-name { color: #880e4f; }
 .ast-layout.template9 .cv-main-content .cv-title { color: #e91e63; }
 .ast-layout.template9 .cv-main-content .cv-section-title { color: #e91e63; border-bottom-color: #fce4ec; }
-    .ast-layout.template9 #cv-container { font-family: 'Playfair Display', serif; color: #212121; }
+.ast-layout.template9 #cv-container { font-family: 'Playfair Display', serif; color: #212121; }
 
 /* AST Template 10 */
 .ast-layout.template10 .cv-sidebar { background-color: #009688; color: #ffffff; font-family: 'PT Sans', sans-serif; }
@@ -1687,7 +1714,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template10 .cv-main-content .cv-name { color: #004d40; }
 .ast-layout.template10 .cv-main-content .cv-title { color: #009688; }
 .ast-layout.template10 .cv-main-content .cv-section-title { color: #009688; border-bottom-color: #e0f2f7; }
-    .ast-layout.template10 #cv-container { font-family: 'PT Sans', sans-serif; color: #212121; }
+.ast-layout.template10 #cv-container { font-family: 'PT Sans', sans-serif; color: #212121; }
 
 /* AST Template 11 */
 .ast-layout.template11 .cv-sidebar { background-color: #8bc34a; color: #ffffff; font-family: 'Verdana', sans-serif; }
@@ -1703,7 +1730,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template11 .cv-main-content .cv-name { color: #33691e; }
 .ast-layout.template11 .cv-main-content .cv-title { color: #8bc34a; }
 .ast-layout.template11 .cv-main-content .cv-section-title { color: #8bc34a; border-bottom-color: #f1f8e9; }
-    .ast-layout.template11 #cv-container { font-family: 'Verdana', sans-serif; color: #212121; }
+.ast-layout.template11 #cv-container { font-family: 'Verdana', sans-serif; color: #212121; }
 
 /* AST Template 12 */
 .ast-layout.template12 .cv-sidebar { background-color: #ffeb3b; color: #212121; font-family: 'Arial', sans-serif; }
@@ -1717,7 +1744,7 @@ body[dir="ltr"] .cv-skill-item {
 .ast-layout.template12 .cv-sidebar .cv-reference-item h4, .ast-layout.template12 .cv-sidebar .cv-reference-item p { color: #212121; }
 .ast-layout.template12 .cv-main-content .cv-header.two-col-main { border-bottom-color: #ffeb3b; }
 .ast-layout.template12 .cv-main-content .cv-name { color: #f57f17; }
-.ast-layout.template12 .cv-main-content .cv-title { color: #ffeb3b; }
+.ast-layout.template12 .cv-main-content .cv-title { color: #ffeb3b; } /* Should be #f57f17 for text, #ffeb3b for accents? */
 .ast-layout.template12 .cv-main-content .cv-section-title { color: #f57f17; border-bottom-color: #fffde7; }
 .ast-layout.template12 .cv-profile-pic { border: 4px solid #212121; }
 .ast-layout.template12 #cv-container { font-family: 'Arial', sans-serif; color: #343a40; }
@@ -1805,6 +1832,11 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
 
 
 /* --- Print styles (VERY IMPORTANT for PDF output and Ctrl+P) --- */
+/* style.css */
+
+/* ... (الجزء العلوي من الملف بدون تغيير) ... */
+
+/* --- Print styles (VERY IMPORTANT for PDF output and Ctrl+P) --- */
 @media print {
     /* --- إخفاء عناصر واجهة المستخدم والتحكم - مشترك للجميع --- */
     body > nav, /* Navbar */
@@ -1863,7 +1895,7 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
         overflow: visible !important;
         page-break-before: auto !important;
         page-break-after: auto !important;
-        page-break-inside: auto !important;
+        page-break-inside: auto !important; /* Allow page breaks inside container */
         position: static !important; /* لضمان الطباعة داخل المستند */
         left: auto !important;
         top: auto !important;
@@ -1900,7 +1932,7 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
         display: flex !important; /* Use flex for print */
         flex-grow: 1 !important;
         gap: 8mm !important;
-        page-break-inside: avoid !important;
+        page-break-inside: auto !important; /* Changed to auto to allow page breaks for the whole layout */
         min-height: 100% !important;
         height: 100% !important;
         flex-wrap: nowrap !important;
@@ -1915,7 +1947,7 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
         gap: 8mm !important;
         min-height: 100% !important;
         height: 100% !important;
-        page-break-inside: avoid !important;
+        page-break-inside: auto !important; /* Changed to auto */
         /* Dynamic columns and areas based on direction */
         grid-template-columns: var(--print-grid-columns, 80mm 1fr) !important;
         grid-template-areas:
@@ -2057,9 +2089,8 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
     .cv-end-marker {
         height: 1px !important;
         margin-top: auto !important;
-        page-break-before: auto !important;
+        page-break-before: avoid !important;
         page-break-after: auto !important;
-        page-break-inside: avoid !important; /* منع كسر العنصر نفسه */
         visibility: hidden !important;
         display: block !important;
         flex-grow: 1 !important;
@@ -2109,175 +2140,143 @@ body[dir="ltr"] .qr-payment-inputs-scroll { padding-right: 0; padding-left: 15px
         overflow: hidden !important;
     }
 }
-    `;
-
-// server.js
-
-// ... (الجزء العلوي من الملف، بما في ذلك require و app.use و TRANSLATIONS و CSS_BASE_CONTENT، يبقى كما هو)
-
-// دالة بناء HTML (النسخة النهائية مع أنماط مدمجة للتخطيط)
-// استبدل الدالة القديمة بالكامل بهذه النسخة الجديدة والمحسنة
-function buildCvHtml(cvData) {
-    // 1. استخراج كل البيانات من الكائن المرسل
-    const {
-        name, jobTitle, email, phone, website, profilePicDataUrl,
-        objective, experiences, educations, customSections, skills, languages, references,
-        templateCategory, templateNumber, language, isPaid
-    } = cvData;
-
-    const direction = language === 'ar' ? 'rtl' : 'ltr';
-    const textAlign = direction === 'rtl' ? 'right' : 'left';
-
-    // 2. بناء كتل HTML لكل قسم على حدة
-    const profilePicHtml = profilePicDataUrl ? `<img src="${profilePicDataUrl}" class="cv-profile-pic">` : '';
-    
-    let contactInfoHtml = '';
-    if (email || phone || website) {
-        contactInfoHtml = '<div class="cv-contact-info">';
-        if (email) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-envelope"></i><p>${email}</p></div>`;
-        if (phone) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-phone"></i><p>${phone}</p></div>`;
-        if (website) contactInfoHtml += `<div class="cv-contact-item"><i class="fas fa-map-marker-alt"></i><p>${website}</p></div>`;
-        contactInfoHtml += '</div>';
-    }
-
-    const objectiveHTML = objective ? `<div class="cv-section" id="objective"><h3 class="cv-section-title">${getTranslation(language, 'Career Objective')}</h3><p>${objective.replace(/\n/g, '<br>')}</p></div>` : '';
-
-    // -- الإصلاح رقم 2: تقليل المسافات في قسم الخبرات --
-    let experienceHTML = '';
-    if (experiences && experiences.length > 0) {
-        experienceHTML = `<div class="cv-section" id="experience"><h3 class="cv-section-title">${getTranslation(language, 'Work Experience')}</h3>`;
-        experiences.forEach(exp => {
-            experienceHTML += `<div class="cv-experience-item">
-                                  <h4>${exp.title || ''}</h4>
-                                  <h5>${exp.company || ''}${exp.company && exp.duration ? ' - ' : ''}${exp.duration || ''}</h5>
-                                  <p>${exp.description ? exp.description.replace(/\n/g, '<br>') : ''}</p>
-                               </div>`;
-        });
-        experienceHTML += '</div>';
-    }
-
-    let educationHTML = '';
-    if (educations && educations.length > 0) {
-        educationHTML = `<div class="cv-section" id="education"><h3 class="cv-section-title">${getTranslation(language, 'Education')}</h3>`;
-        educations.forEach(edu => {
-            educationHTML += `<div class="cv-education-item">
-                                 <h4>${edu.degree || ''}</h4>
-                                 <h5>${edu.institution || ''}${edu.institution && edu.duration ? ' - ' : ''}${edu.duration || ''}</h5>
-                              </div>`;
-        });
-        educationHTML += '</div>';
-    }
-
-    // -- الإصلاح رقم 1: إضافة الأقسام المخصصة بنفس تنسيق الأقسام الأخرى --
-    let customSectionsHTML = '';
-    if (customSections && customSections.length > 0) {
-        customSections.forEach(section => {
-            if (section.title && section.title.trim() !== '') {
-                customSectionsHTML += `<div class="cv-section custom-section"><h3 class="cv-section-title">${section.title}</h3><ul class="custom-list">`;
-                if (section.items && section.items.length > 0) {
-                    section.items.forEach(item => {
-                        if (item && item.trim() !== '') customSectionsHTML += `<li>${item}</li>`;
-                    });
-                }
-                customSectionsHTML += '</ul></div>';
-            }
-        });
-    }
-    
-    let skillsHTML = '';
-    // ... كود بناء skillsHTML بنفس الطريقة
-    let languagesHTML = '';
-    // ... كود بناء languagesHTML
-    let referencesHTML = '';
-    // ... كود بناء referencesHTML
-
-    // 3. بناء الهيكل النهائي للسيرة الذاتية بالترتيب الصحيح
-    let finalHtmlBodyContent = '';
-    
-    if (templateCategory === 'normal') {
-        finalHtmlBodyContent = `
-            <div class="cv-header">
-                ${profilePicHtml}
-                <div class="cv-header-text">
-                    <h1 class="cv-name">${name}</h1>
-                    <h2 class="cv-title">${jobTitle}</h2>
-                    ${contactInfoHtml}
-                </div>
-            </div>
-            <div class="cv-main-body">
-                ${objectiveHTML}
-                ${experienceHTML}
-                ${educationHTML}
-                ${customSectionsHTML} 
-                ${skillsHTML}
-                ${languagesHTML}
-                ${referencesHTML}
-            </div>`;
-    } else { // للقوالب ذات العمودين (standard, professional, ast)
-        const sidebarContent = `
-            ${profilePicHtml}
-            ${contactInfoHtml}
-            ${skillsHTML}
-            ${languagesHTML}
-            ${referencesHTML}
-        `;
-        const mainContent = `
-            <div class="cv-header two-col-main">
-                <h1 class="cv-name">${name}</h1>
-                <h2 class="cv-title">${jobTitle}</h2>
-            </div>
-            ${objectiveHTML}
-            ${experienceHTML}
-            ${educationHTML}
-            ${customSectionsHTML}
-        `;
-        
-        finalHtmlBodyContent = `
-            <div class="cv-two-column-layout">
-                <div class="cv-sidebar">${sidebarContent}</div>
-                <div class="cv-main-content">${mainContent}</div>
-            </div>
-        `;
-    }
-
-    // 4. تجميع كل شيء في ملف HTML كامل مع تضمين CSS
-    // لاحظ أن CSS_BASE_CONTENT هو متغير يحتوي على كامل محتوى ملف style.css الذي أرسلته
-    return `
-        <!DOCTYPE html>
-        <html lang="${language}" dir="${direction}">
-        <head>
-            <meta charset="UTF-8">
-            <title>CV</title>
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-            <style>
-                ${CSS_BASE_CONTENT} 
-
-                /* --- هنا الإصلاحات النهائية للتنسيق --- */
-                .cv-experience-item {
-                    margin-top: -10px; /* تقليل المسافة بين الخبرات */
-                    padding-top: 5px;
-                }
-                .cv-section-title {
-                    margin-bottom: 5px; /* تقليل المسافة تحت العناوين */
-                }
-                .normal-layout .cv-skill-list {
-                    justify-content: ${textAlign}; /* محاذاة المهارات في القالب العادي */
-                }
-                .cv-two-column-layout {
-                    flex-direction: ${direction === 'rtl' ? 'row-reverse' : 'row'}; /* محاذاة الأعمدة */
-                }
-            </style>
-        </head>
-        <body>
-            <div id="cv-container" class="${templateCategory}-layout template${templateNumber}" dir="${direction}">
-                ${finalHtmlBodyContent}
-            </div>
-        </body>
-        </html>
-    `;
+/* Live Sales Notification Styles */
+.sales-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px; /* أو left: 20px للغة الإنجليزية */
+    background-color: #fff;
+    color: #333;
+    padding: 15px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(20px);
+    transition: all 0.5s ease-in-out;
 }
 
+body.ltr .sales-notification {
+    right: auto;
+    left: 20px;
+}
 
+.sales-notification.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Discount Card Styles */
+.discount-section {
+    text-align: center;
+    border-top: 1px solid #eee;
+    border-bottom: 1px solid #eee;
+    padding: 20px 0;
+}
+.discount-card {
+    display: flex;
+    align-items: center;
+    background-color: #f8f9fa;
+    border: 2px dashed #0d6efd;
+    border-radius: 10px;
+    padding: 10px 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 220px;
+}
+.discount-card:hover, .discount-card.selected {
+    border-style: solid;
+    background-color: #e9f3ff;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.discount-tag {
+    background-color: #0d6efd;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2em;
+    padding: 10px;
+    border-radius: 8px;
+    margin-left: 15px; /* LTR default */
+}
+html[dir="rtl"] .discount-tag {
+    margin-left: 0;
+    margin-right: 15px;
+}
+.discount-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+html[dir="rtl"] .discount-info {
+    align-items: flex-end;
+}
+.discount-info .code-text {
+    font-family: monospace;
+    font-size: 1.1em;
+    color: #333;
+}
+.discount-info small {
+    color: #555;
+}
+
+/* Remove Discount Link Style */
+.remove-discount-link {
+    color: #dc3545; /* لون أحمر للإشارة إلى الحذف */
+    text-decoration: underline;
+    font-size: 0.9em;
+    font-weight: bold;
+}
+.remove-discount-link:hover {
+    color: #c82333; /* لون أغمق عند مرور الماوس */
+}
+
+/*
+--- Promo Bar Styles (Corrected) ---
+*/
+.promo-bar {
+    background-color: #343a40; /* لون رمادي داكن احترافي */
+    color: #ffffff;
+    text-align: center;
+    position: fixed;   /* تعديل جوهري: استخدام fixed بدلاً من sticky */
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1051;     /* رقم مرتفع جداً ليضمن ظهوره فوق كل شيء */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    height: 40px;      /* تحديد ارتفاع ثابت للشريط */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.promo-bar p {
+    margin: 0;
+    font-weight: 500;
+    font-size: 0.95em;
+}
+
+.blinking-code {
+    animation: blink-animation 2.5s infinite; /* إبطاء الأنيميشن قليلاً */
+    background-color: rgba(255, 193, 7, 0.2); /* خلفية صفراء خفيفة */
+    color: #ffc107; /* لون أصفر للنص */
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-family: monospace;
+    margin: 0 5px;
+    border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+/* تعريف الأنيميشن (تأثير الوميض) */
+@keyframes blink-animation {
+    50% {
+        background-color: #ffc107; /* وميض أصفر قوي */
+        color: #000;
+    }
+}
+    `;
 
 // استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المحدثة
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -2435,68 +2434,96 @@ app.post('/api/prepare-checkout', (req, res) => {
 });
 
 
-app.post('/generate-cv', async (req, res) => {
-    console.log('Received request for CV generation.');
-    const cvData = req.body; // البيانات المرسلة من الواجهة الأمامية
+// في ملف server.js
 
-    let browser; // تعريف المتصفح خارج try-catch لضمان إغلاقه
+// احتفظ بـ CSS_BASE_CONTENT كما هو في ملفك
+
+app.post('/generate-cv', async (req, res) => {
+    console.log('Received request for WYSIWYG CV generation.');
+    
+    // 1. استقبل البيانات الجديدة من الواجهة الأمامية
+    const { html, isPaid, language, templateCss } = req.body;
+
+    if (!html) {
+        return res.status(400).json({ status: 'error', message: 'HTML content is missing.' });
+    }
+
+    const direction = language === 'ar' ? 'rtl' : 'ltr';
+
+    // 2. قم ببناء مستند HTML كامل حول الـ HTML المستلم
+    // لا حاجة لدالة buildCvHtml المعقدة بعد الآن
+    const fullHtml = `
+        <!DOCTYPE html>
+        <html lang="${language}" dir="${direction}">
+        <head>
+            <meta charset="UTF-8">
+            <title>CV</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+            <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+            <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+            <style>
+                /* 3. حقن محتوى style.css بالكامل */
+                ${CSS_BASE_CONTENT}
+                
+                /* حقن CSS الخاص بالقالب (للألوان والخطوط) */
+                ${templateCss || ''}
+
+                /* قواعد إضافية صارمة للطباعة لضمان التطابق */
+                @media print {
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: white !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+                    #cv-container {
+                        margin: 0 auto !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                        /* تأكد من أن الحاوية تأخذ أبعاد A4 عند الطباعة */
+                        width: 210mm !important;
+                        min-height: 297mm !important;
+                        height: auto !important; /* للسماح بالمحتوى متعدد الصفحات */
+                        page-break-before: always; /* ابدأ دائمًا في صفحة جديدة */
+                    }
+                }
+            </style>
+        </head>
+        <body class="${language === 'ar' ? 'rtl' : 'ltr'}">
+            <div id="cv-container" class="${isPaid ? '' : 'watermarked'}">
+                ${html}
+            </div>
+        </body>
+        </html>
+    `;
+
+    let browser;
     try {
         browser = await chromium.launch({
-            headless: true, // تشغيل بلا واجهة رسومية
-            args: [
-                '--no-sandbox', // ضروري لبيئات السحابة
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage', // مهم لبيئات Docker/Linux محدودة الذاكرة
-                '--single-process', // مهم لـ App Engine Standard
-                '--no-zygote',      // مهم لـ App Engine Standard
-                '--disable-gpu',
-                // أعلام إضافية لتجنب مشاكل dbus ومكونات النظام الأخرى
-                '--disable-system-font-check',
-                '--disable-component-extensions-with-background-pages',
-                '--disable-dbus',
-                '--use-gl=swiftshader',
-                '--disable-web-security',
-            ]
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
-
         const page = await browser.newPage();
+        
+        // 5. استخدم `setContent` مع الـ HTML الكامل الذي بنيته
+        await page.setContent(fullHtml, { waitUntil: 'networkidle' });
 
-        // قم ببناء HTML الكامل هنا باستخدام دالة buildCvHtml والبيانات المستلمة
-        const htmlContent = buildCvHtml(cvData); // تمرير كائن cvData كاملاً
-
-        await page.setContent(htmlContent, {
-            waitUntil: 'networkidle', // Playwright يستخدم 'networkidle' بدلاً من 'networkidle0'
-            timeout: 60000 // مهلة 60 ثانية لضمان تحميل كل شيء
-        });
-
-        await page.evaluate(async () => {
-            await Promise.all(Array.from(document.images).filter(img => !img.complete).map(img => new Promise(resolve => { img.onload = img.onerror = resolve; })));
-        });
-        await new Promise(resolve => setTimeout(resolve, 1500)); 
-
-        // طباعة الصفحة إلى PDF
         const pdfBuffer = await page.pdf({
             format: 'A4',
-            printBackground: true, // مهم لطباعة ألوان الخلفية والخلفيات
-            margin: { // ضبط الهوامش لضمان ملء الصفحة وعدم الاقتطاع
-                top: '0mm',
-                right: '0mm',
-                bottom: '0mm',
-                left: '0mm',
-            },
+            printBackground: true,
+            margin: { top: '0', right: '0', bottom: '0', left: '0' },
         });
-
-        await browser.close(); // إغلاق المتصفح
 
         res.json({
             status: 'success',
             base64Pdf: pdfBuffer.toString('base64'),
-            message: 'PDF generated successfully.'
+            message: 'PDF generated successfully from frontend HTML.'
         });
-        console.log('PDF generated and sent as base64 successfully.');
+        console.log('PDF generated from frontend HTML and sent as base64.');
 
     } catch (error) {
-        console.error('Error generating PDF:', error);
+        console.error('Error generating PDF from frontend HTML:', error);
         res.status(500).json({ status: 'error', message: 'Error generating PDF: ' + error.message });
     } finally {
         if (browser) {
@@ -2504,7 +2531,6 @@ app.post('/generate-cv', async (req, res) => {
         }
     }
 });
-
 app.listen(port, () => { // الاستماع على جميع واجهات الشبكة
     console.log(`Node.js CV PDF Generator listening on port ${port}`);
 });
