@@ -2380,14 +2380,18 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
 
         // توليد الـ PDF من الـ HTML الجاهز
         let pdfBuffer;
-        let browser;
+        let browser = null;
         try {
-            browser = await chromium.launch({
-                headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox']
-            });
+            // ▼▼▼  هذا هو التعديل الجديد ▼▼▼
+            const token = process.env.BROWSERLESS_TOKEN;
+            if (!token) throw new Error("Browserless token not set.");
+        
+            // نتصل بالمتصفح البعيد بدلاً من تشغيله محليًا
+            browser = await chromium.connect(`wss://chrome.browserless.io?token=${token}`);
+            // ▲▲▲ نهاية التعديل ▲▲▲
+        
             const page = await browser.newPage();
-            await page.setContent(finalHtml, { waitUntil: 'networkidle' });
+            await page.setContent(fullHtml, { waitUntil: 'networkidle' });
             pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
         } finally {
             if (browser) await browser.close();
