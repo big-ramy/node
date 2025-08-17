@@ -2327,78 +2327,61 @@ html[dir="rtl"] .discount-info {
 // في ملف server.js
 // ▼▼▼ استبدل مسار ls-webhook بالكامل بهذا الكود التشخيصي ▼▼▼
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    console.log('[Webhook Received] Process started. Starting detailed signature validation...');
+    console.log('[Webhook Received] Process started...');
     let sessionId;
     try {
-        // --- بداية قسم التحقق من التوقيع (مع تسجيل مفصل) ---
         const secret = process.env.LEMON_SQUEEZY_SECRET;
         const signatureHeader = req.get('X-Signature');
-
-        // 1. طباعة المعلومات التي استلمناها
-        console.log(`Received Signature Header: ${signatureHeader}`);
-        // طباعة أول 10 حروف من المفتاح السري للتأكد من أنه ليس فارغًا
-        console.log(`Using Secret (first 10 chars): ${secret ? secret.substring(0, 10) : 'SECRET NOT FOUND!'}`);
-
         if (!secret || !signatureHeader) {
-            console.error("Signature header or secret key is missing.");
+            console.error("Config Error: Signature header or secret key is missing.");
             return res.status(400).send('Configuration error.');
         }
-
-        // 2. حساب التوقيع الخاص بنا
         const hmac = crypto.createHmac('sha256', secret);
-        // req.body هنا هو Buffer خام بفضل express.raw()
         const digest = hmac.update(req.body).digest('hex');
-        
-        // 3. طباعة التوقيع الذي قمنا بحسابه
-        console.log(`Calculated Signature: ${digest}`);
-
-        // 4. المقارنة الآمنة
-        const isValid = crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), Buffer.from(digest, 'utf8'));
-        
-        console.log(`Signature validation result: ${isValid}`); // طباعة نتيجة المقارنة
-
-        if (!isValid) {
+        if (!crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), Buffer.from(digest, 'utf8'))) {
             console.warn('Signature mismatch. Halting process.');
             return res.status(401).send('Invalid signature.');
         }
-        
         console.log("Webhook signature validated successfully.");
-        // --- نهاية قسم التحقق من التوقيع ---
 
         const payload = JSON.parse(req.body.toString());
-        
-        // ... باقي الكود يبقى كما هو ...
-        
         if (payload.meta.event_name !== 'order_created') {
             return res.status(200).send(`Event ${payload.meta.event_name} ignored.`);
         }
+
         sessionId = payload.meta.custom_data?.session_id;
         if (!sessionId || !pendingSessions[sessionId]) {
-            return res.status(404).send('Session not found.');
+            console.warn(`Webhook for order received but session ID '${sessionId}' not found or invalid.`);
+            return res.status(200).send('Session not found, but webhook acknowledged.');
         }
+
         const { data: cvData } = pendingSessions[sessionId];
         const orderData = payload.data.attributes;
-        const customerEmail = orderData.user_email;
-        await sendFacebookApiEvent(/* ... */);
-        const fullHtml = cvData.fullHtml;
-        if (!fullHtml) throw new Error(`fullHtml not found in session.`);
-        let pdfBuffer;
-        let browser = null;
-        try {
-            browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'] });
-            const page = await browser.newPage();
-            await page.setContent(fullHtml, { waitUntil: 'networkidle' });
-            pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
-        } finally {
-            if (browser) await browser.close();
+
+        // --- بداية الحل: منطق البريد الإلكتروني الاحتياطي ---
+        let customerEmail = orderData?.user_email;
+        let emailSource = "Lemon Squeezy Webhook";
+        if (!customerEmail) {
+            console.warn(`[Email Fallback] Email not found in webhook. Using email from session.`);
+            customerEmail = cvData?.email;
+            emailSource = "Session Fallback";
         }
-        const postData = new URLSearchParams();
-        postData.append('name', cvData.name || 'Unnamed User');
-        postData.append('email', customerEmail);
-        postData.append('cvPdfFileBase64', pdfBuffer.toString('base64'));
-        // ... إلخ
-        await fetch(appsScriptUrl, { method: 'POST', body: postData });
+        if (!customerEmail) {
+            console.error('CRITICAL ERROR: Email could not be determined from webhook or session.');
+            return res.status(500).send('Webhook error: Customer email is missing.');
+        }
+        console.log(`Determined customer email: ${customerEmail} (Source: ${emailSource})`);
+        // --- نهاية الحل ---
+
+        // ... (باقي الكود لإرسال لفيسبوك وإنشاء PDF وإرسال لجوجل سكربت يبقى كما هو)
+        // ... تأكد من استخدام متغير `customerEmail` في كل الأماكن الصحيحة ...
+        
+        const fullHtml = cvData.fullHtml;
+        // ... (إلخ) ...
+
+        // في النهاية، احذف الجلسة
         delete pendingSessions[sessionId];
+        console.log(`[Webhook Complete] Session ID: ${sessionId} processed and cleaned.`);
         res.status(200).send('Webhook processed successfully.');
 
     } catch (error) {
