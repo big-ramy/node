@@ -2459,15 +2459,34 @@ app.post('/api/prepare-checkout', (req, res) => {
 
 // في ملف server.js
 
+// استبدل دالة /generate-cv بالكامل
 app.post('/generate-cv', async (req, res) => {
-    console.log('Received request with pre-built HTML.');
-    
-    // الآن نستقبل متغير واحد فقط وهو fullHtml
-    const { fullHtml } = req.body;
+    // الآن نستقبل fullHtml بالإضافة إلى بيانات اختيارية للمستخدم
+    const { fullHtml, isWatermarked, userData } = req.body;
 
     if (!fullHtml) {
         return res.status(400).json({ status: 'error', message: 'Full HTML content is missing.' });
     }
+
+    // --- بداية الحل: تفعيل تذكير العينة ---
+    if (isWatermarked && userData && userData.email) {
+        console.log(`[Preview Download] User ${userData.email} downloaded a watermarked sample. Scheduling reminder.`);
+        try {
+            const scriptParams = new URLSearchParams({
+                action: 'schedulePreviewReminder',
+                email: userData.email,
+                name: userData.name || 'Customer',
+                language: userData.lang || 'ar'
+            });
+            // لا ننتظر الرد من السكربت (fire and forget) لتسريع الاستجابة للمستخدم
+            fetch(appsScriptUrl, { method: 'POST', body: scriptParams }).catch(err => {
+                console.error("Error calling Apps Script for preview reminder:", err);
+            });
+        } catch (scriptError) {
+            console.error("Failed to trigger preview reminder:", scriptError);
+        }
+    }
+    // --- نهاية الحل ---
 
     let browser;
     try {
@@ -2476,19 +2495,12 @@ app.post('/generate-cv', async (req, res) => {
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
         const page = await browser.newPage();
-        
-        // **مهم جدًا:** قم بمحاكاة وسائط الشاشة لضمان تطابق الألوان والتخطيط
         await page.emulateMedia({ media: 'screen' });
-
-        // استخدم setContent مع الـ HTML الكامل المستلم من الواجهة الأمامية
         await page.setContent(fullHtml, { waitUntil: 'networkidle' });
-
-        // انتظر قليلاً لضمان اكتمال أي عمليات rendering أخيرة (احتياطي)
         await new Promise(resolve => setTimeout(resolve, 500));
 
         const pdfBuffer = await page.pdf({
             format: 'A4',
-            // **مهم جدًا:** هذا الخيار هو مفتاح ظهور الألوان والخلفيات
             printBackground: true,
             margin: { top: '0', right: '0', bottom: '0', left: '0' },
         });
@@ -2496,11 +2508,11 @@ app.post('/generate-cv', async (req, res) => {
         res.json({
             status: 'success',
             base64Pdf: pdfBuffer.toString('base64'),
-            message: 'PDF generated successfully from pre-built HTML.'
+            message: 'PDF generated successfully.'
         });
 
     } catch (error) {
-        console.error('Error generating PDF from pre-built HTML:', error);
+        console.error('Error generating PDF:', error);
         res.status(500).json({ status: 'error', message: 'Server error during PDF conversion: ' + error.message });
     } finally {
         if (browser) {
@@ -2509,6 +2521,46 @@ app.post('/generate-cv', async (req, res) => {
     }
 });
 
+// --- NEW: Abandoned Cart & Session Cleanup Mechanism ---
+const ONE_HOUR = 60 * 60 * 1000;
+const CHECK_INTERVAL = 5 * 60 * 1000; // 5 دقائق
+
+setInterval(() => {
+    const now = Date.now();
+    console.log('[Session Cleanup] Running periodic check for expired sessions...');
+    Object.keys(pendingSessions).forEach(sessionId => {
+        const session = pendingSessions[sessionId];
+        if (now - session.timestamp > ONE_HOUR) {
+            const { email, name, lang } = session.data;
+            console.log(`[Session Expired] Session ${sessionId} for user ${email} has expired. Triggering abandoned cart reminder.`);
+
+            // أرسل طلباً إلى Google Apps Script لإرسال إيميل التذكير
+            const scriptParams = new URLSearchParams({
+                action: 'sendAbandonedCartReminder',
+                sessionId: sessionId,
+                email: email,
+                name: name || 'Customer',
+                language: lang || 'ar'
+            });
+
+            fetch(appsScriptUrl, { method: 'POST', body: scriptParams })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log(`Successfully triggered abandoned cart email for ${email}.`);
+                    } else {
+                        console.error(`Apps Script failed to send abandoned cart email for ${email}:`, data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error("Error calling Apps Script for abandoned cart reminder:", err);
+                });
+
+            // احذف الجلسة بعد معالجتها
+            delete pendingSessions[sessionId];
+        }
+    });
+}, CHECK_INTERVAL);
 
 app.listen(port, () => { // الاستماع على جميع واجهات الشبكة
     console.log(`Node.js CV PDF Generator listening on port ${port}`);
