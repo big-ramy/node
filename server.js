@@ -2324,70 +2324,64 @@ html[dir="rtl"] .discount-info {
 }
     `;
 
-// استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المحدثة
-// ▼▼▼ استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المصححة ▼▼▼
-
 // في ملف server.js
-// ▼▼▼ استبدل مسار ls-webhook القديم بهذا المسار الجديد والمصحح ▼▼▼
-
+// ▼▼▼ استبدل مسار ls-webhook بالكامل بهذا الكود التشخيصي ▼▼▼
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    console.log('[Webhook Received] Process started.');
+    console.log('[Webhook Received] Process started. Starting detailed signature validation...');
     let sessionId;
     try {
-        // --- بداية قسم التحقق من التوقيع (تم تعديله) ---
+        // --- بداية قسم التحقق من التوقيع (مع تسجيل مفصل) ---
         const secret = process.env.LEMON_SQUEEZY_SECRET;
-        if (!secret) {
-            throw new Error("Lemon Squeezy secret not configured in environment variables.");
-        }
-        
-        // req.body هنا هو Buffer خام بفضل express.raw()
-        const hmac = crypto.createHmac('sha256', secret);
-        const digest = Buffer.from(hmac.update(req.body).digest('hex'), 'utf8');
         const signatureHeader = req.get('X-Signature');
 
-        if (!signatureHeader) {
-            console.warn("Webhook received without X-Signature header.");
-            return res.status(401).send('Signature header missing.');
+        // 1. طباعة المعلومات التي استلمناها
+        console.log(`Received Signature Header: ${signatureHeader}`);
+        // طباعة أول 10 حروف من المفتاح السري للتأكد من أنه ليس فارغًا
+        console.log(`Using Secret (first 10 chars): ${secret ? secret.substring(0, 10) : 'SECRET NOT FOUND!'}`);
+
+        if (!secret || !signatureHeader) {
+            console.error("Signature header or secret key is missing.");
+            return res.status(400).send('Configuration error.');
         }
 
-        if (!crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), digest)) {
-            console.warn('Invalid webhook signature.');
+        // 2. حساب التوقيع الخاص بنا
+        const hmac = crypto.createHmac('sha256', secret);
+        // req.body هنا هو Buffer خام بفضل express.raw()
+        const digest = hmac.update(req.body).digest('hex');
+        
+        // 3. طباعة التوقيع الذي قمنا بحسابه
+        console.log(`Calculated Signature: ${digest}`);
+
+        // 4. المقارنة الآمنة
+        const isValid = crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), Buffer.from(digest, 'utf8'));
+        
+        console.log(`Signature validation result: ${isValid}`); // طباعة نتيجة المقارنة
+
+        if (!isValid) {
+            console.warn('Signature mismatch. Halting process.');
             return res.status(401).send('Invalid signature.');
         }
+        
         console.log("Webhook signature validated successfully.");
         // --- نهاية قسم التحقق من التوقيع ---
 
-        // الآن نقوم بتحويل الجسم الخام إلى JSON لنستخدمه
         const payload = JSON.parse(req.body.toString());
-
+        
+        // ... باقي الكود يبقى كما هو ...
+        
         if (payload.meta.event_name !== 'order_created') {
             return res.status(200).send(`Event ${payload.meta.event_name} ignored.`);
         }
-
         sessionId = payload.meta.custom_data?.session_id;
         if (!sessionId || !pendingSessions[sessionId]) {
-            console.error(`Webhook error: Session ID "${sessionId}" not found.`);
             return res.status(404).send('Session not found.');
         }
-
         const { data: cvData } = pendingSessions[sessionId];
         const orderData = payload.data.attributes;
         const customerEmail = orderData.user_email;
-        
-        // ... باقي الكود يبقى كما هو تمامًا ...
-        // إرسال لفيسبوك، توليد PDF، إرسال لجوجل...
-        
-        console.log(`Processing order for ${customerEmail}.`);
-        await sendFacebookApiEvent(
-            'Purchase',
-            { email: customerEmail, phone: cvData.phone || null },
-            { value: parseFloat((orderData.total / 100).toFixed(2)), currency: orderData.currency },
-            payload.data.id
-        );
-        
+        await sendFacebookApiEvent(/* ... */);
         const fullHtml = cvData.fullHtml;
-        if (!fullHtml) throw new Error(`fullHtml not found in session ${sessionId}.`);
-
+        if (!fullHtml) throw new Error(`fullHtml not found in session.`);
         let pdfBuffer;
         let browser = null;
         try {
@@ -2398,21 +2392,12 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
         } finally {
             if (browser) await browser.close();
         }
-
         const postData = new URLSearchParams();
         postData.append('name', cvData.name || 'Unnamed User');
         postData.append('email', customerEmail);
-        postData.append('phoneNumber', cvData.phone || '');
-        postData.append('cvTemplateCategory', cvData.templateCategory || 'Standard');
-        postData.append('paymentMethod', 'Lemon Squeezy');
-        postData.append('language', cvData.language || 'en');
-        postData.append('pricePaid', (orderData.total / 100).toFixed(2));
-        postData.append('discountCode', orderData.discount_code || '');
         postData.append('cvPdfFileBase64', pdfBuffer.toString('base64'));
-        postData.append('cvPdfFileName', `CV-${cvData.name.replace(/\s/g, '_')}.pdf`);
-        
+        // ... إلخ
         await fetch(appsScriptUrl, { method: 'POST', body: postData });
-
         delete pendingSessions[sessionId];
         res.status(200).send('Webhook processed successfully.');
 
