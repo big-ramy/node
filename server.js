@@ -2341,7 +2341,7 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
         }
         
         // req.body هنا هو Buffer خام بفضل express.raw()
-        const hmac = crypto.createHmac('sha266', secret);
+        const hmac = crypto.createHmac('sha256', secret);
         const digest = Buffer.from(hmac.update(req.body).digest('hex'), 'utf8');
         const signatureHeader = req.get('X-Signature');
 
