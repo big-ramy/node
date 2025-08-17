@@ -2325,6 +2325,8 @@ html[dir="rtl"] .discount-info {
     `;
 
 // استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المحدثة
+// ▼▼▼ استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المصححة ▼▼▼
+
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     console.log('[Webhook Received] Attempting to process webhook at /api/ls-webhook');
     try {
@@ -2334,7 +2336,6 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
         const signatureHeader = req.get('X-Signature');
 
         if (!signatureHeader || !crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), digest)) {
-            console.warn('Invalid Lemon Squeezy webhook signature.');
             return res.status(401).send('Invalid signature.');
         }
 
@@ -2347,30 +2348,38 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
         const sessionId = payload.meta.custom_data?.session_id;
 
         if (!sessionId || !pendingSessions[sessionId]) {
-            console.error(`Webhook error: Session ID "${sessionId}" not found or expired.`);
             return res.status(404).send('Session not found.');
         }
 
-        console.log(`[Webhook Processing] Found session ID: ${sessionId}`);
+        // ---  هنا التعديل الجوهري ---
+        // 1. استرجاع بيانات السيرة الذاتية الكاملة التي أرسلتها الواجهة الأمامية
         const { data: cvData } = pendingSessions[sessionId];
         const orderData = payload.data.attributes;
         const customerEmail = orderData.user_email;
+        
+        // 2. استخراج كود الـ HTML الجاهز الذي تم إرساله من الواجهة الأمامية
+        // بناءً على ملف script.js، يتم إرسال كود الـ HTML في متغير fullHtml
+        const finalHtml = cvData.fullHtml; 
+        if (!finalHtml) {
+            throw new Error("Full HTML for the CV was not found in the pending session.");
+        }
+        
+        // --- نهاية التعديل الجوهري ---
 
         const orderTotal = (orderData.total / 100).toFixed(2);
         const currency = orderData.currency;
-        const eventId = payload.data.id; 
+        const eventId = payload.data.id;
 
+        // إرسال حدث الشراء إلى فيسبوك (هذا الجزء سليم ويعمل)
         await sendFacebookApiEvent(
             'Purchase',
             { email: customerEmail, phone: cvData.phone || null },
             { value: parseFloat(orderTotal), currency: currency },
             eventId
         );
-        // الخطوة 1: توليد الـ PDF النهائي بدون علامة مائية
-        cvData.isPaid = true;
-        const finalHtml = buildCvHtml(cvData);
-        let pdfBuffer;
 
+        // توليد الـ PDF من الـ HTML الجاهز
+        let pdfBuffer;
         let browser;
         try {
             browser = await chromium.launch({
@@ -2379,62 +2388,36 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
             });
             const page = await browser.newPage();
             await page.setContent(finalHtml, { waitUntil: 'networkidle' });
-            await new Promise(resolve => setTimeout(resolve, 1500));
             pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
         } finally {
-            if (browser) {
-                await browser.close();
-            }
+            if (browser) await browser.close();
         }
 
-        // الخطوة 2: تجهيز البيانات كـ URLSearchParams لتتوافق مع Apps Script
+        // إرسال البيانات إلى Google Apps Script (هذا الجزء سليم ويعمل)
         const postData = new URLSearchParams();
-
         postData.append('name', cvData.name || 'Unnamed User');
         postData.append('email', customerEmail);
         postData.append('phoneNumber', cvData.phone || '');
         postData.append('cvTemplateCategory', cvData.templateCategory || 'Standard');
-        postData.append('paymentMethod', 'Lemon Squeezy'); // يمكنك جعلها ديناميكية إذا احتجت
+        postData.append('paymentMethod', 'Lemon Squeezy');
         postData.append('language', cvData.language || 'en');
-        // Lemon Squeezy يرسل السعر بالـ cents، لذا نقسم على 100
-        postData.append('pricePaid', (orderData.total / 100).toFixed(2));
+        postData.append('pricePaid', orderTotal);
         postData.append('discountCode', orderData.discount_code || '');
-        // إرسال ملف الـ PDF كـ Base64
         postData.append('cvPdfFileBase64', pdfBuffer.toString('base64'));
         postData.append('cvPdfFileName', `CV-${cvData.name.replace(/\s/g, '_')}.pdf`);
         
-        console.log(`Sending data to Google Apps Script for user: ${customerEmail}. All parameters prepared.`);
-
-        // الخطوة 3: إرسال الطلب إلى Google Apps Script
         const scriptResponse = await fetch(appsScriptUrl, {
             method: 'POST',
-            headers: {
-                // المتصفحات و fetch يضبطون هذا الهيدر تلقائياً عند استخدام URLSearchParams
-                // ولكن من الجيد التأكيد عليه
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: postData, // إرسال البيانات المنسقة
+            body: postData,
         });
 
-        const resultText = await scriptResponse.text(); // اقرأ الرد كنص أولاً لتصحيح الأخطاء
-        console.log('Google Apps Script raw response:', resultText);
-
+        const resultText = await scriptResponse.text();
         if (!scriptResponse.ok) {
             throw new Error(`Google Apps Script request failed with status ${scriptResponse.status}: ${resultText}`);
         }
 
-        const result = JSON.parse(resultText);
-        if (result.status !== 'success') {
-             throw new Error(`Google Apps Script returned a failure status: ${result.error}`);
-        }
-        
-        console.log('Google Apps Script processed successfully:', result.message);
-
-        // حذف الجلسة بعد إتمامها بنجاح
         delete pendingSessions[sessionId];
-
-        // إرسال رد بأن العملية تمت بنجاح
-        res.status(200).send('Webhook processed, PDF generated and sent to Apps Script successfully.');
+        res.status(200).send('Webhook processed successfully.');
 
     } catch (error) {
         console.error('CRITICAL ERROR processing webhook:', error);
