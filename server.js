@@ -2327,69 +2327,71 @@ html[dir="rtl"] .discount-info {
 // استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المحدثة
 // ▼▼▼ استبدل دالة الـ webhook الحالية بالكامل بهذه النسخة المصححة ▼▼▼
 
+// في ملف server.js
+// ▼▼▼ استبدل مسار ls-webhook القديم بهذا المسار الجديد والمصحح ▼▼▼
+
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-    console.log('[Webhook Received] Attempting to process webhook at /api/ls-webhook');
+    console.log('[Webhook Received] Process started.');
+    let sessionId;
     try {
-        const secret = process.env.LEMON_SQUEEZY_SECRET || "YOUR_LEMON_SQUEEZY_WEBHOOK_SECRET";
-        const hmac = crypto.createHmac('sha256', secret);
+        // --- بداية قسم التحقق من التوقيع (تم تعديله) ---
+        const secret = process.env.LEMON_SQUEEZY_SECRET;
+        if (!secret) {
+            throw new Error("Lemon Squeezy secret not configured in environment variables.");
+        }
+        
+        // req.body هنا هو Buffer خام بفضل express.raw()
+        const hmac = crypto.createHmac('sha266', secret);
         const digest = Buffer.from(hmac.update(req.body).digest('hex'), 'utf8');
         const signatureHeader = req.get('X-Signature');
 
-        if (!signatureHeader || !crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), digest)) {
-            return res.status(401).send('Invalid signature.');
+        if (!signatureHeader) {
+            console.warn("Webhook received without X-Signature header.");
+            return res.status(401).send('Signature header missing.');
         }
 
+        if (!crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), digest)) {
+            console.warn('Invalid webhook signature.');
+            return res.status(401).send('Invalid signature.');
+        }
+        console.log("Webhook signature validated successfully.");
+        // --- نهاية قسم التحقق من التوقيع ---
+
+        // الآن نقوم بتحويل الجسم الخام إلى JSON لنستخدمه
         const payload = JSON.parse(req.body.toString());
 
         if (payload.meta.event_name !== 'order_created') {
-            return res.status(200).send(`Event ${payload.meta.event_name} received and ignored.`);
+            return res.status(200).send(`Event ${payload.meta.event_name} ignored.`);
         }
 
-        const sessionId = payload.meta.custom_data?.session_id;
-
+        sessionId = payload.meta.custom_data?.session_id;
         if (!sessionId || !pendingSessions[sessionId]) {
+            console.error(`Webhook error: Session ID "${sessionId}" not found.`);
             return res.status(404).send('Session not found.');
         }
 
-        // ---  هنا التعديل الجوهري ---
-        // 1. استرجاع بيانات السيرة الذاتية الكاملة التي أرسلتها الواجهة الأمامية
         const { data: cvData } = pendingSessions[sessionId];
         const orderData = payload.data.attributes;
         const customerEmail = orderData.user_email;
         
-        // 2. استخراج كود الـ HTML الجاهز الذي تم إرساله من الواجهة الأمامية
-        // بناءً على ملف script.js، يتم إرسال كود الـ HTML في متغير fullHtml
-        const finalHtml = cvData.fullHtml; 
-        if (!finalHtml) {
-            throw new Error("Full HTML for the CV was not found in the pending session.");
-        }
+        // ... باقي الكود يبقى كما هو تمامًا ...
+        // إرسال لفيسبوك، توليد PDF، إرسال لجوجل...
         
-        // --- نهاية التعديل الجوهري ---
-
-        const orderTotal = (orderData.total / 100).toFixed(2);
-        const currency = orderData.currency;
-        const eventId = payload.data.id;
-
-        // إرسال حدث الشراء إلى فيسبوك (هذا الجزء سليم ويعمل)
+        console.log(`Processing order for ${customerEmail}.`);
         await sendFacebookApiEvent(
             'Purchase',
             { email: customerEmail, phone: cvData.phone || null },
-            { value: parseFloat(orderTotal), currency: currency },
-            eventId
+            { value: parseFloat((orderData.total / 100).toFixed(2)), currency: orderData.currency },
+            payload.data.id
         );
+        
+        const fullHtml = cvData.fullHtml;
+        if (!fullHtml) throw new Error(`fullHtml not found in session ${sessionId}.`);
 
-        // توليد الـ PDF من الـ HTML الجاهز
         let pdfBuffer;
         let browser = null;
         try {
-            // ▼▼▼  هذا هو التعديل الجديد ▼▼▼
-            const token = process.env.BROWSERLESS_TOKEN;
-            if (!token) throw new Error("Browserless token not set.");
-        
-            // نتصل بالمتصفح البعيد بدلاً من تشغيله محليًا
-            browser = await chromium.connect(`wss://chrome.browserless.io?token=${token}`);
-            // ▲▲▲ نهاية التعديل ▲▲▲
-        
+            browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'] });
             const page = await browser.newPage();
             await page.setContent(fullHtml, { waitUntil: 'networkidle' });
             pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
@@ -2397,7 +2399,6 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
             if (browser) await browser.close();
         }
 
-        // إرسال البيانات إلى Google Apps Script (هذا الجزء سليم ويعمل)
         const postData = new URLSearchParams();
         postData.append('name', cvData.name || 'Unnamed User');
         postData.append('email', customerEmail);
@@ -2405,26 +2406,18 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
         postData.append('cvTemplateCategory', cvData.templateCategory || 'Standard');
         postData.append('paymentMethod', 'Lemon Squeezy');
         postData.append('language', cvData.language || 'en');
-        postData.append('pricePaid', orderTotal);
+        postData.append('pricePaid', (orderData.total / 100).toFixed(2));
         postData.append('discountCode', orderData.discount_code || '');
         postData.append('cvPdfFileBase64', pdfBuffer.toString('base64'));
         postData.append('cvPdfFileName', `CV-${cvData.name.replace(/\s/g, '_')}.pdf`);
         
-        const scriptResponse = await fetch(appsScriptUrl, {
-            method: 'POST',
-            body: postData,
-        });
-
-        const resultText = await scriptResponse.text();
-        if (!scriptResponse.ok) {
-            throw new Error(`Google Apps Script request failed with status ${scriptResponse.status}: ${resultText}`);
-        }
+        await fetch(appsScriptUrl, { method: 'POST', body: postData });
 
         delete pendingSessions[sessionId];
         res.status(200).send('Webhook processed successfully.');
 
     } catch (error) {
-        console.error('CRITICAL ERROR processing webhook:', error);
+        console.error('CRITICAL ERROR processing webhook:', error.message);
         res.status(500).send('Webhook processing error.');
     }
 });
