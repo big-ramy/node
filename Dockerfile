@@ -1,7 +1,6 @@
 # 1. ابدأ من صورة Playwright الرسمية التي تحتوي على Node.js v20
-# هذه الصورة تأتي مع المتصفحات وكل الاعتماديات مثبتة مسبقًا وجاهزة.
-# التغيير هنا: 1.44.0 بدلاً من 1.44.1
-FROM mcr.microsoft.com/playwright/node:v1.44.0-jammy
+# *** هذا هو السطر الذي تم تصحيحه بشكل نهائي ***
+FROM mcr.microsoft.com/playwright:v1.44.0-jammy
 
 # 2. تعيين دليل العمل داخل الحاوية
 WORKDIR /app
