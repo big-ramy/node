@@ -1,62 +1,25 @@
-# استخدم صورة Node.js رسمية (slim لتكون خفيفة الوزن)
-FROM node:20-slim
+# 1. ابدأ من صورة Playwright الرسمية التي تحتوي على Node.js v20
+# هذه الصورة تأتي مع المتصفحات وكل الاعتماديات مثبتة مسبقًا وجاهزة،
+# مما يغنينا عن خطوات التثبيت اليدوية الطويلة (apt-get و npx playwright install).
+FROM mcr.microsoft.com/playwright/node:v1.44.1-jammy
 
-# تعيين دليل العمل داخل الحاوية
+# 2. تعيين دليل العمل داخل الحاوية (تمامًا مثل ملفك القديم)
 WORKDIR /app
 
-# تثبيت تبعيات نظام التشغيل اللازمة لـ Playwright ومتصفح Chromium
-# هذه الخطوة حاسمة لضمان أن Playwright يمكنه تشغيل المتصفح
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    # Playwright يحتاج هذه المكتبات لتشغيل Chromium
-    libatk-bridge2.0-0 \
-    libgbm-dev \
-    libgtk-3-0 \
-    libxss1 \
-    libasound2 \
-    libnss3 \
-    libdbus-1-3 \
-    # خطوط إضافية لدعم أفضل للغة العربية وغيرها
-    fontconfig \
-    fonts-liberation \
-    libnspr4 \
-    libgdk-pixbuf2.0-0 \
-    libglib2.0-0 \
-    libcups2 \
-    libfontconfig1 \
-    libsqlite3-0 \
-    libxi6 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libxfixes3 \
-    libxcursor1 \
-    libxinerama1 \
-    libpangocairo-1.0-0 \
-    libpangoft2-1.0-0 \
-    # تنظيف بعد التثبيت لتقليل حجم الصورة
-    --no-install-recommends && \
-rm -rf /var/lib/apt/lists/*
-
-# نسخ ملفات package.json و package-lock.json (أو npm-shrinkwrap.json)
+# 3. نسخ ملفات package.json و package-lock.json أولاً
+# (هذا يستغل ميزة التخزين المؤقت في دوكر لتسريع عمليات البناء المستقبلية)
 COPY package*.json ./
 
-# تثبيت تبعيات Node.js (بما في ذلك Playwright)
-# --omit=dev لتجنب تثبيت تبعيات التطوير
+# 4. تثبيت تبعيات Node.js فقط (بدون تبعيات النظام أو المتصفح)
+# نستخدم npm ci لأنها أسرع ومخصصة لبيئات النشر (تمامًا مثل ملفك القديم)
 RUN npm ci --omit=dev
 
-# تثبيت متصفحات Playwright داخل الحاوية
-# هذا الأمر سيقوم بتنزيل متصفحات Chromium (وملفاتها التنفيذية)
-# في المسار الذي يتوقعه Playwright
-RUN npx playwright install chromium --with-deps
-
-# نسخ باقي ملفات التطبيق إلى مجلد العمل
+# 5. نسخ باقي ملفات التطبيق إلى مجلد العمل (تمامًا مثل ملفك القديم)
 COPY . .
 
-# تحديد المنفذ الذي يستمع عليه تطبيقك
-# Cloud Run يتوقع أن يستمع التطبيق على المنفذ المحدد في متغير البيئة PORT (افتراضيًا 8080)
-ENV PORT 8080 
+# 6. تحديد المنفذ الذي يستمع عليه تطبيقك (تمامًا مثل ملفك القديم)
+# Render يتعرف على هذا تلقائيًا، لكن من الجيد تحديده
+ENV PORT 8080
 
-# الأمر الذي يشغل تطبيقك عند بدء تشغيل الحاوية
+# 7. الأمر الذي يشغل تطبيقك عند بدء تشغيل الحاوية (تمامًا مثل ملفك القديم)
 CMD ["npm", "start"]
