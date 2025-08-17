@@ -2429,7 +2429,9 @@ app.post('/api/prepare-checkout', (req, res) => {
         }
 
         const sessionId = uuidv4(); // إنشاء معرف فريد للجلسة
-        
+        const userEmailForLog = cvData.email || 'email_not_provided_in_session';
+        console.log(`[Session Prepared] ID: ${sessionId} for user: ${userEmailForLog}`);
+
         // تخزين بيانات السيرة الذاتية في الذاكرة مع عمر افتراضي (مثلاً: ساعة واحدة)
         pendingSessions[sessionId] = {
             data: cvData,
