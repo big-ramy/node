@@ -53,7 +53,7 @@ async function sendFacebookApiEvent(eventName, userData, customData, eventId) {
         console.error('Failed to send event to Facebook CAPI:', error);
     }
 }
-const port = process.env.PORT || 8080; // المنفذ 8080 لـ Docker المحلي و Cloud Run
+const port = process.env.PORT;
 const pendingSessions = {}; //  <-- أضف هذا الكائن لتخزين الجلسات
 const appsScriptUrl = process.env.APPS_SCRIPT_URL;
 if (!appsScriptUrl) {
