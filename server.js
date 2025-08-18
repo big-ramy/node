@@ -88,7 +88,9 @@ if (!appsScriptUrl) {
 
 app.use(cors());
 
-
+app.get('/', (req, res) => {
+  res.status(200).send('Server is running and healthy!');
+});
 
 
 // ** يجب تعريف TRANSLATIONS مرة واحدة فقط **
