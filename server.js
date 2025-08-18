@@ -34,7 +34,7 @@ async function sendFacebookApiEvent(eventName, userData, customData, eventId) {
             user_data: hashedUserData,
             custom_data: customData,
         }],
-        test_event_code: 'TEST78353',
+        test_event_code: 'TEST77222',
     };
     const url = `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`;
     try {
