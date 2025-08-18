@@ -2324,134 +2324,101 @@ html[dir="rtl"] .discount-info {
 }
     `;
 
-// في ملف server.js
-// ▼▼▼ استبدل مسار ls-webhook بالكامل بهذا الكود التشخيصي ▼▼▼
-// استبدل دالة /api/ls-webhook الحالية بالكامل بهذا الكود
+// استبدل هذه الدالة بالكامل في ملف server.js
 app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (req, res) => {
     console.log('[Webhook Received] Process started for Lemon Squeezy event.');
-    let sessionId; // تعريف المتغير خارج كتلة try ليكون متاحاً في catch
+    
+    // --- بداية الحل: المعالجة غير المتزامنة ---
+    // 1. أرسل رداً فورياً إلى Lemon Squeezy
+    res.status(200).send('Webhook acknowledged. Processing in background.');
 
-    try {
-        // --- 1. التحقق من التوقيع (Signature Validation) ---
-        const secret = process.env.LEMON_SQUEEZY_SECRET;
-        const signatureHeader = req.get('X-Signature');
-
-        if (!secret || !signatureHeader) {
-            console.error("CRITICAL CONFIG ERROR: Signature header or secret key is missing in environment variables.");
-            return res.status(400).send('Webhook configuration error on server.');
-        }
-
-        const hmac = crypto.createHmac('sha256', secret);
-        const digest = hmac.update(req.body).digest('hex');
-
-        if (!crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), Buffer.from(digest, 'utf8'))) {
-            console.warn(`[Webhook Auth] Signature mismatch. Received: ${signatureHeader}, Calculated: ${digest}. Halting process.`);
-            return res.status(401).send('Invalid signature.');
-        }
-        
-        console.log("[Webhook Auth] Signature validated successfully.");
-
-        // --- 2. معالجة البيانات (Payload Processing) ---
-        const payload = JSON.parse(req.body.toString());
-        
-        // تجاهل أي حدث غير 'order_created'
-        if (payload.meta.event_name !== 'order_created') {
-            console.log(`[Webhook Ignored] Event '${payload.meta.event_name}' is not 'order_created'.`);
-            return res.status(200).send(`Event ${payload.meta.event_name} ignored.`);
-        }
-        
-        sessionId = payload.meta.custom_data?.session_id;
-        if (!sessionId || !pendingSessions[sessionId]) {
-            console.warn(`[Webhook Warning] Received 'order_created' webhook but session ID '${sessionId}' was not found or already processed.`);
-            // نرد بـ 200 OK لمنع Lemon Squeezy من إعادة الإرسال
-            return res.status(200).send('Session not found, but webhook acknowledged.');
-        }
-
-        // --- 3. الآلية الاحتياطية للبريد الإلكتروني (Email Fallback Logic) ---
-        const { data: cvData } = pendingSessions[sessionId];
-        const orderData = payload.data.attributes;
-        
-        let customerEmail = orderData?.user_email;
-        let emailSource = "Lemon Squeezy Webhook";
-
-        if (!customerEmail || !validateEmail(customerEmail)) { // التحقق من وجوده وصحته
-            console.warn(`[Email Fallback] Email from Lemon Squeezy payload ('${customerEmail}') is missing or invalid. Attempting to use email from session.`);
-            customerEmail = cvData?.email; // المحاولة الثانية: من بيانات الجلسة
-            emailSource = "Session Fallback";
-        }
-
-        // التحقق النهائي: هل حصلنا على بريد إلكتروني صالح؟
-        if (!customerEmail || !validateEmail(customerEmail)) {
-            console.error(`CRITICAL ERROR: A valid email could not be determined for session ${sessionId}. Cannot proceed with sending CV.`);
-            // نحذف الجلسة لمنع محاولات فاشلة متكررة
-            delete pendingSessions[sessionId];
-            return res.status(500).send('Webhook processing error: Customer email is missing or invalid from all sources.');
-        }
-        
-        console.log(`[Email Determined] Using email: ${customerEmail} (Source: ${emailSource}) for session ${sessionId}`);
-
-        // --- 4. إرسال الأحداث والملفات (Events & File Dispatch) ---
-
-        // إرسال حدث لفيسبوك CAPI
-        await sendFacebookApiEvent(
-            'Purchase',
-            { email: customerEmail, phone: cvData.phone, name: cvData.name },
-            {
-                currency: orderData.currency || 'SAR',
-                value: (orderData.total / 100).toFixed(2)
-            },
-            `evt-purchase-${sessionId}`
-        );
-
-        // توليد PDF النهائي بدون علامة مائية
-        const fullHtml = cvData.fullHtml;
-        if (!fullHtml) {
-            throw new Error(`Critical Error: fullHtml not found in session data for ID: ${sessionId}`);
-        }
-
-        let pdfBuffer;
-        let browser = null;
+    // 2. نفذ باقي المهام في الخلفية
+    (async () => {
+        let sessionId;
         try {
-            console.log(`[PDF Generation] Launching browser for session ${sessionId}`);
-            browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--single-process'] });
-            const page = await browser.newPage();
-            await page.setContent(fullHtml, { waitUntil: 'networkidle' });
-            pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
-            console.log(`[PDF Generation] PDF buffer created successfully for session ${sessionId}`);
-        } finally {
-            if (browser) await browser.close();
+            const secret = process.env.LEMON_SQUEEZY_SECRET;
+            const signatureHeader = req.get('X-Signature');
+            if (!secret || !signatureHeader) throw new Error("Signature header or secret key is missing.");
+            
+            const hmac = crypto.createHmac('sha256', secret);
+            const digest = hmac.update(req.body).digest('hex');
+            if (!crypto.timingSafeEqual(Buffer.from(signatureHeader, 'utf8'), Buffer.from(digest, 'utf8'))) {
+                throw new Error("Invalid signature.");
+            }
+            console.log("[Webhook Auth] Signature validated successfully.");
+
+            const payload = JSON.parse(req.body.toString());
+            if (payload.meta.event_name !== 'order_created') {
+                console.log(`[Webhook Ignored] Event '${payload.meta.event_name}'.`);
+                return; // إنهاء التنفيذ الصامت
+            }
+
+            sessionId = payload.meta.custom_data?.session_id;
+            // التحقق من وجود الجلسة. إذا لم تكن موجودة، فهذا يعني أنها عولجت بالفعل.
+            if (!sessionId || !pendingSessions[sessionId]) {
+                console.warn(`[Webhook Warning] Session ID '${sessionId}' not found or already processed.`);
+                return; // إنهاء التنفيذ
+            }
+            
+            // هام: استخرج البيانات واحذف الجلسة فوراً لمنع أي معالجة مكررة
+            const { data: cvData } = pendingSessions[sessionId];
+            delete pendingSessions[sessionId];
+            console.log(`[Session Locked] Session ${sessionId} locked and removed to prevent duplicates.`);
+
+            const orderData = payload.data.attributes;
+            const customerEmail = cvData?.email || orderData?.user_email;
+            if (!customerEmail) throw new Error("Could not determine a valid customer email.");
+            
+            console.log(`[Email Determined] Using email: ${customerEmail} for session ${sessionId}`);
+
+            // إرسال حدث لفيسبوك
+            await sendFacebookApiEvent('Purchase', { email: customerEmail, name: cvData.name }, { currency: orderData.currency || 'SAR', value: (orderData.total / 100).toFixed(2) }, `evt-purchase-${sessionId}`);
+
+            // إنشاء الـ PDF
+            const pdfBuffer = await generatePdfInBackground(cvData.fullHtml, sessionId);
+
+            // إرسال البيانات إلى Google Apps Script
+            const postData = new URLSearchParams({
+                name: cvData.name || 'Unnamed User',
+                email: customerEmail,
+                phoneNumber: cvData.phone || '',
+                website: cvData.website || '',
+                pricePaid: (orderData.total / 100).toFixed(2),
+                paymentMethod: `Lemon Squeezy - ${orderData.first_order_item.variant_name}`,
+                cvTemplateCategory: cvData.templateCategory,
+                discountCode: orderData.discount_total > 0 ? 'LEMONSQUEEZY_DISCOUNT' : 'N/A',
+                language: cvData.language || 'ar',
+                cvPdfFileBase64: pdfBuffer.toString('base64'),
+                cvPdfFileName: `CV_${cvData.name.replace(/\s/g, '_')}.pdf`,
+            });
+            console.log(`[Apps Script] Sending final data for session ${sessionId}`);
+            await fetch(appsScriptUrl, { method: 'POST', body: postData });
+
+            console.log(`[Webhook Complete] Background processing for session ${sessionId} finished successfully.`);
+
+        } catch (error) {
+            console.error(`CRITICAL ERROR during background processing for session [${sessionId || 'UNKNOWN'}]:`, error.message);
+            // هنا يمكنك إضافة منطق لإعلامك بالخطأ، مثلاً عبر إيميل
         }
-
-        // إرسال البيانات إلى Google Apps Script
-        const postData = new URLSearchParams();
-        postData.append('name', cvData.name || 'Unnamed User');
-        postData.append('email', customerEmail); // استخدام البريد الإلكتروني الذي تم التحقق منه
-        postData.append('phoneNumber', cvData.phone || '');
-        postData.append('website', cvData.website || '');
-        postData.append('pricePaid', (orderData.total / 100).toFixed(2));
-        postData.append('paymentMethod', `Lemon Squeezy - ${orderData.first_order_item.variant_name}`);
-        postData.append('cvTemplateCategory', cvData.templateCategory);
-        postData.append('discountCode', orderData.discount_total > 0 ? 'LEMONSQUEEZY_DISCOUNT' : 'N/A');
-        postData.append('language', cvData.language || 'ar');
-        postData.append('cvPdfFileBase64', pdfBuffer.toString('base64'));
-        postData.append('cvPdfFileName', `CV_${cvData.name.replace(/\s/g, '_')}.pdf`);
-
-        console.log(`[Apps Script] Sending final data for session ${sessionId}`);
-        await fetch(appsScriptUrl, { method: 'POST', body: postData });
-
-        // --- 5. تنظيف الجلسة (Session Cleanup) ---
-        delete pendingSessions[sessionId];
-        console.log(`[Webhook Complete] Session ID: ${sessionId} processed and cleaned successfully.`);
-        
-        res.status(200).send('Webhook processed successfully.');
-
-    } catch (error) {
-        console.error(`CRITICAL ERROR processing webhook for session [${sessionId || 'UNKNOWN'}]:`, error);
-        // لا تحذف الجلسة عند حدوث خطأ حرج، قد ترغب في إعادة المحاولة يدوياً أو تحليلها
-        res.status(500).send('Internal server error during webhook processing.');
-    }
+    })(); // استدعاء الدالة غير المتزامنة فوراً
+    // --- نهاية الحل ---
 });
 
+// دالة مساعدة جديدة لإنشاء الـ PDF لتنظيم الكود
+async function generatePdfInBackground(fullHtml, sessionId) {
+    let browser = null;
+    try {
+        console.log(`[PDF Generation] Launching browser for session ${sessionId}`);
+        browser = await chromium.launch({ headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] });
+        const page = await browser.newPage();
+        await page.setContent(fullHtml, { waitUntil: 'networkidle' });
+        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+        console.log(`[PDF Generation] PDF buffer created successfully for session ${sessionId}`);
+        return pdfBuffer;
+    } finally {
+        if (browser) await browser.close();
+    }
+}
 // دالة مساعدة للتحقق من صحة الإيميل
 function validateEmail(email) {
     if (!email) return false;
