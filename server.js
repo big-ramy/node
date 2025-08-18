@@ -9,33 +9,60 @@ const crypto = require('crypto'); // أضف هذا السطر مع الـ requir
 const app = express();
 const fetch = require('node-fetch');
 
+// استبدل هذه الدالة بالكامل في ملف السيرفر
 async function sendFacebookApiEvent(eventName, userData, customData, eventId) {
     const PIXEL_ID = process.env.PIXEL_ID;
     const ACCESS_TOKEN = process.env.FB_ACCESS_TOKEN;
+    const FB_TEST_CODE = process.env.FB_TEST_EVENT_CODE; // قراءة متغير البيئة للاختبار
 
     if (!PIXEL_ID || !ACCESS_TOKEN) {
         console.error("Facebook Pixel ID or Access Token is not set in environment variables.");
         return;
     }
+
+    // --- بناء كائن بيانات المستخدم المشفرة (hashed) ---
     const hashedUserData = {};
-    if (userData.email) {
-        hashedUserData.em = [crypto.createHash('sha256').update(userData.email.toLowerCase()).digest('hex')];
-    }
+    if (userData.email) hashedUserData.em = [crypto.createHash('sha256').update(userData.email.trim().toLowerCase()).digest('hex')];
     if (userData.phone) {
         const cleanedPhone = userData.phone.replace(/\D/g, '');
-        hashedUserData.ph = [crypto.createHash('sha256').update(cleanedPhone).digest('hex')];
+        if (cleanedPhone) hashedUserData.ph = [crypto.createHash('sha256').update(cleanedPhone).digest('hex')];
     }
-    const payload = {
-        data: [{
-            event_name: eventName,
-            event_time: Math.floor(Date.now() / 1000),
-            action_source: 'website',
-            event_id: eventId || crypto.randomUUID(),
-            user_data: hashedUserData,
-            custom_data: customData,
-        }],
+    if (userData.name) {
+        const nameParts = userData.name.trim().toLowerCase().split(/\s+/);
+        if (nameParts[0]) hashedUserData.fn = [crypto.createHash('sha256').update(nameParts[0]).digest('hex')];
+        if (nameParts.length > 1) hashedUserData.ln = [crypto.createHash('sha256').update(nameParts.slice(1).join(' ')).digest('hex')];
+    }
+    if (userData.city) hashedUserData.ct = [crypto.createHash('sha256').update(userData.city.trim().toLowerCase()).digest('hex')];
+    hashedUserData.country = [crypto.createHash('sha256').update('sa').digest('hex')];
+
+    // --- بناء كائن الحدث الرئيسي ---
+    const eventData = {
+        event_name: eventName,
+        event_time: Math.floor(Date.now() / 1000),
+        action_source: 'website',
+        event_id: eventId || crypto.randomUUID(),
+        user_data: hashedUserData,
+        custom_data: customData,
     };
+
+    // إضافة معلومات المطابقة الإضافية (إن وجدت)
+    if (userData.userAgent) eventData.user_data.client_user_agent = userData.userAgent;
+    if (userData.fbp) eventData.user_data.fbp = userData.fbp;
+    if (userData.fbc) eventData.user_data.fbc = userData.fbc;
+    
+    // --- بناء الحمولة النهائية ---
+    const payload = {
+        data: [eventData],
+    };
+
+    // إضافة كود الاختبار بشكل شرطي فقط إذا كانت له قيمة
+    if (FB_TEST_CODE) {
+        payload.test_event_code = FB_TEST_CODE;
+        console.log(`[FB CAPI] Sending event in TEST MODE with code: ${FB_TEST_CODE}`);
+    }
+
     const url = `https://graph.facebook.com/v19.0/${PIXEL_ID}/events?access_token=${ACCESS_TOKEN}`;
+    
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -2371,8 +2398,23 @@ app.post('/api/ls-webhook', express.raw({ type: 'application/json' }), async (re
             console.log(`[Email Determined] Using email: ${customerEmail} for session ${sessionId}`);
 
             // إرسال حدث لفيسبوك
-            await sendFacebookApiEvent('Purchase', { email: customerEmail, name: cvData.name }, { currency: orderData.currency || 'SAR', value: (orderData.total / 100).toFixed(2) }, `evt-purchase-${sessionId}`);
-
+            await sendFacebookApiEvent(
+                'Purchase', 
+                { 
+                    email: customerEmail, 
+                    name: cvData.name,
+                    phone: cvData.phone,
+                    city: cvData.website, // المدينة تأتي من حقل website
+                    userAgent: cvData.userAgent,
+                    fbp: cvData.fbp,
+                    fbc: cvData.fbc
+                }, 
+                { 
+                    currency: orderData.currency || 'SAR', 
+                    value: (orderData.total / 100).toFixed(2) 
+                }, 
+                `evt-purchase-${sessionId}`
+            );
             // إنشاء الـ PDF
             const pdfBuffer = await generatePdfInBackground(cvData.fullHtml, sessionId);
 
