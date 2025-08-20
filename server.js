@@ -2556,37 +2556,20 @@ app.post('/generate-cv', async (req, res) => {
         
         await page.setContent(fullHtml, { waitUntil: 'networkidle' });
 
-        // ⭐⭐⭐ القياس والتعديل الدقيق - النسخة النهائية ⭐⭐⭐
+        // ⭐⭐⭐ منطق جديد ومبسط وأكثر قوة للتحكم في الفواصل ⭐⭐⭐
         await page.evaluate(async () => {
             const PAGE_HEIGHT_IN_PX = 1100; // ارتفاع A4 التقريبي بالبكسل مع هامش أمان
 
-            // --- 1. منع انقسام العناصر الفردية (كما في السابق) ---
-            const breakableItems = Array.from(document.querySelectorAll(
-                '.cv-experience-item, .cv-education-item, .cv-reference-item, .custom-subsection-entry'
-            ));
-            
-            let hasChanges = true;
-            while (hasChanges) {
-                hasChanges = false;
-                for (const item of breakableItems) {
-                    if (item.classList.contains('break-before-me')) continue;
-
-                    const rect = item.getBoundingClientRect();
-                    const startPage = Math.floor(rect.top / PAGE_HEIGHT_IN_PX);
-                    const endPage = Math.floor((rect.top + rect.height) / PAGE_HEIGHT_IN_PX);
-
-                    if (startPage !== endPage) {
-                        if (rect.top % PAGE_HEIGHT_IN_PX > 50) { 
-                            item.classList.add('break-before-me');
-                            hasChanges = true;
-                            break; // اخرج لإعادة الحساب من جديد
-                        }
-                    }
-                }
-                if (hasChanges) {
-                    await new Promise(resolve => requestAnimationFrame(resolve));
+            // الآن، اسمح فقط للأقسام الأطول من صفحة بالانقسام
+            const allSections = Array.from(document.querySelectorAll('.cv-section'));
+            for (const section of allSections) {
+                const rect = section.getBoundingClientRect();
+                // إذا كان ارتفاع القسم أكبر من ارتفاع الصفحة، اسمح له بالانقسام
+                if (rect.height > PAGE_HEIGHT_IN_PX) {
+                    section.style.pageBreakInside = 'auto';
                 }
             }
+        });
             
             // --- 2. الحل الجديد: منع "عزل العناوين" ---
             const allSections = Array.from(document.querySelectorAll('.cv-section'));
