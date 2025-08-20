@@ -2554,46 +2554,51 @@ app.post('/generate-cv', async (req, res) => {
         });
         const page = await browser.newPage();
         
+        // ⭐ الخطوة 1: محاكاة عرض الشاشة لإظهار الظلال والأنماط البصرية ⭐
+        await page.emulateMedia({ media: 'screen' });
+        
         await page.setContent(fullHtml, { waitUntil: 'networkidle' });
 
-        // ⭐⭐⭐ منطق جديد ومبسط وأكثر قوة للتحكم في الفواصل ⭐⭐⭐
+        // ⭐ الخطوة 2: انتظر تحميل الخطوط بالكامل ⭐
+        await page.evaluate(() => document.fonts.ready);
+        
+        // ⭐ الخطوة 3: المنطق الذكي والنهائي لمعالجة فواصل الصفحات ⭐
         await page.evaluate(async () => {
-            const PAGE_HEIGHT_IN_PX = 1100; // ارتفاع A4 التقريبي بالبكسل مع هامش أمان
+            const PAGE_HEIGHT_IN_PX = 1100;
 
-            // الآن، اسمح فقط للأقسام الأطول من صفحة بالانقسام
-            const allSections = Array.from(document.querySelectorAll('.cv-section'));
-            for (const section of allSections) {
-                const rect = section.getBoundingClientRect();
-                // إذا كان ارتفاع القسم أكبر من ارتفاع الصفحة، اسمح له بالانقسام
-                if (rect.height > PAGE_HEIGHT_IN_PX) {
-                    section.style.pageBreakInside = 'auto';
-                }
-            }
-        });
+            const breakableItems = Array.from(document.querySelectorAll(
+                // نستهدف العناصر الفردية وليس الأقسام الكاملة
+                '.cv-experience-item, .cv-education-item, .cv-reference-item, .custom-subsection-entry'
+            ));
             
-            // --- 2. الحل الجديد: منع "عزل العناوين" ---
-            const allSections = Array.from(document.querySelectorAll('.cv-section'));
-            for (const section of allSections) {
-                const title = section.querySelector('.cv-section-title');
-                // ابحث عن أول عنصر محتوى فعلي بعد العنوان
-                const firstContentItem = section.querySelector('.cv-experience-item, .cv-education-item, .cv-reference-item, .custom-subsection-entry, .skills-container, .cv-language-list, p');
-                
-                if (!title || !firstContentItem) continue;
+            let hasChanges = true;
+            // نستمر في إعادة الحساب طالما أن هناك تغييرات تحدث
+            while (hasChanges) {
+                hasChanges = false;
+                for (const item of breakableItems) {
+                    if (item.classList.contains('break-before-me')) continue;
 
-                const titleRect = title.getBoundingClientRect();
-                const contentRect = firstContentItem.getBoundingClientRect();
+                    const rect = item.getBoundingClientRect();
+                    const itemTop = rect.top;
+                    const itemBottom = rect.top + rect.height;
 
-                // تحديد في أي صفحة ينتهي العنوان وفي أي صفحة يبدأ المحتوى
-                const titleEndPage = Math.floor((titleRect.top + titleRect.height) / PAGE_HEIGHT_IN_PX);
-                const contentStartPage = Math.floor(contentRect.top / PAGE_HEIGHT_IN_PX);
-                
-                // إذا كان المحتوى يبدأ في الصفحة التالية للعنوان، فهذا يعني أن العنوان معزول
-                if (contentStartPage > titleEndPage) {
-                    // أضف الفاصل قبل العنوان نفسه لدفعه هو والمحتوى معًا للصفحة التالية
-                    title.classList.add('break-before-me');
+                    const startPage = Math.floor(itemTop / PAGE_HEIGHT_IN_PX);
+                    const endPage = Math.floor(itemBottom / PAGE_HEIGHT_IN_PX);
+                    
+                    // إذا كان العنصر يعبر حدود الصفحة
+                    if (startPage !== endPage) {
+                        // ولا يبدأ في بداية الصفحة (لتجنب الحلقات اللانهائية)
+                        if (itemTop % PAGE_HEIGHT_IN_PX > 50) { 
+                            item.classList.add('break-before-me');
+                            hasChanges = true;
+                            break; 
+                        }
+                    }
+                }
+                if (hasChanges) {
+                    await new Promise(resolve => requestAnimationFrame(resolve));
                 }
             }
-             await new Promise(resolve => requestAnimationFrame(resolve)); // انتظر التحديث الأخير
         });
         
         const pdfBuffer = await page.pdf({
@@ -2605,11 +2610,11 @@ app.post('/generate-cv', async (req, res) => {
         res.json({
             status: 'success',
             base64Pdf: pdfBuffer.toString('base64'),
-            message: 'PDF generated successfully with advanced page breaks.'
+            message: 'PDF generated successfully with correct styles and page breaks.'
         });
 
     } catch (error) {
-        console.error('Error generating PDF with smart breaks:', error);
+        console.error('Error generating PDF:', error);
         res.status(500).json({ status: 'error', message: 'Server error during PDF conversion: ' + error.message });
     } finally {
         if (browser) {
